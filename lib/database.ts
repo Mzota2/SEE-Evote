@@ -452,7 +452,8 @@ export const checkOrganizationExists = async (searchTerm: string): Promise<strin
 // Get User Roles
 export const getUserRoles = async (userId: string) => {
   try {
-    const rolesQuery = query(collection(db, "roles"), where("userId", "==", userId), orderBy("createdAt", "desc"))
+    console.log(userId);
+    const rolesQuery = query(collection(db, "roles"), where("userId", "==", userId))
     const rolesSnapshot = await getDocs(rolesQuery)
     const roles = rolesSnapshot.docs.map((doc) => {
       return {
@@ -460,6 +461,7 @@ export const getUserRoles = async (userId: string) => {
         ...doc.data(),
       } as Role
     })
+    console.log(roles);
     return { roles, error: null }
   } catch (error: any) {
     return { roles: [], error: error.message }

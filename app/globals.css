@@ -129,6 +129,9 @@
   /* Updated custom SEE-Evote brand color utilities */
   --color-ivote-primary: var(--ivote-primary);
   --color-ivote-secondary: var(--ivote-secondary);
+
+  --color-see-evote-primary: var(--see-evote-primary);
+  --color-see-evote-secondary: var(--see-evote-secondary);
 }
 
 @layer base {

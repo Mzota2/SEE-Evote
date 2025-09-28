@@ -43,6 +43,12 @@
   --ivote-secondary: #f5c242;
   --ivote-primary-rgb: 79, 195, 224;
   --ivote-secondary-rgb: 245, 194, 66;
+
+  /* see evote */
+  --see-evote-primary:#4fc3e0;
+  --see-evote-secondary: #f5c242;
+  --see-evote-primary-rgb: 79, 195, 224;
+  --see-evote-secondary-rgb: 245, 194, 66;
 }
 
 .dark {

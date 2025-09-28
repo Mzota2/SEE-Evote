@@ -888,7 +888,7 @@ export const updateCandidate = async (candidateId: string, updateData: Partial<C
 
       // Get public URL
       const { data: publicUrl } = supabase.storage.from("see-evote").getPublicUrl(data.path)
-
+      console.log('updateData',updateData)
       await updateDoc(doc(db, "candidates", candidateId), {
         ...updateData,
         image: publicUrl.publicUrl,
@@ -896,6 +896,11 @@ export const updateCandidate = async (candidateId: string, updateData: Partial<C
       })
       return { error: null, success: true, candidateId }
     }
+
+    await updateDoc(doc(db, "candidates", candidateId), {
+        ...updateData,
+        updatedAt: serverTimestamp(),
+    })
 
     return { error: null, success: true, candidateId }
   } catch (error: any) {

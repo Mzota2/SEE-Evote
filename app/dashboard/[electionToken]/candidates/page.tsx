@@ -140,6 +140,7 @@ export default function CandidatesPage({ params }: CandidatesPageProps) {
   }
 
   const handleUpdateCandidate = async (candidateId: string, data: Partial<Candidate>, imageData:File) => {
+    console.log('update data', data);
     const result = await updateCandidate(candidateId, data, imageData)
     if (result.success) {
       toast({
@@ -468,6 +469,7 @@ function EditCandidateForm({
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   
   const handleSubmit = (e: React.FormEvent) => {
+    console.log(formData);
     e.preventDefault()
     onSave(formData, imageData as File)
   }

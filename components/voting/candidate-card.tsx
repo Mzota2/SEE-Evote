@@ -15,7 +15,7 @@ interface CandidateCardProps {
 export function CandidateCard({ candidate, isSelected, onSelect, onViewDetails }: CandidateCardProps) {
   return (
     <Card
-      className={`p-4 sm:p-6 text-center transition-all ${isSelected ? "ring-2 ring-see-evote-primary bg-see-evote-primary/5" : "hover:shadow-lg"}`}
+      className={`p-4 sm:p-6 text-center transition-all ${isSelected ? "ring-2 ring-ivote-primabg-ivote-primary bg-ivote-primary/5" : "hover:shadow-lg"}`}
     >
       <div className="space-y-3 sm:space-y-4">
         {/* Candidate Image */}
@@ -46,8 +46,8 @@ export function CandidateCard({ candidate, isSelected, onSelect, onViewDetails }
             onClick={onSelect}
             className={`w-full text-sm sm:text-base py-2 sm:py-3 ${
               isSelected
-                ? "bg-see-evote-primary text-white"
-                : "bg-see-evote-primary hover:bg-see-evote-primary/90 text-white"
+                ? "bg-ivote-primary text-white"
+                : "bg-ivote-primary hover:bg-ivote-primary/90 text-white"
             }`}
           >
             {isSelected ? "SELECTED" : "VOTE"}
@@ -55,7 +55,7 @@ export function CandidateCard({ candidate, isSelected, onSelect, onViewDetails }
           <Button
             onClick={onViewDetails}
             variant="outline"
-            className="w-full border-see-evote-primary text-see-evote-primary hover:bg-see-evote-primary hover:text-white bg-transparent text-sm sm:text-base py-2 sm:py-3"
+            className="w-full border-ivote-primabg-ivote-primary text-ivote-primabg-ivote-primary hover:bg-ivote-primary hover:text-white bg-transparent text-sm sm:text-base py-2 sm:py-3"
           >
             View Details
           </Button>

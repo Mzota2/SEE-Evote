@@ -164,7 +164,7 @@ export function AdminDashboard({ election, userRole, positions, candidates, logs
       <Card className="p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Activity</h2>
         {logs && logs.length > 0 ? (
-          <ul className="space-y-4">
+          <ul className="space-y-4 h-[300px] overflow-y-auto">
             {logs.map((log) => (
               <li key={log.id} className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-purple-500" />

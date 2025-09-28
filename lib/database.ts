@@ -265,10 +265,22 @@ export const getActionLogsWithUsers = async (electionId: string) => {
     const logsSnapshot = await getDocs(logsQuery)
     const userIds = logsSnapshot.docs.map((doc) => doc.data().userId)
 
-    const usersQuery = query(collection(db, "users"), where("id", "in", userIds))
-    const usersSnapshot = await getDocs(usersQuery)
+    // Firestore 'in' query only supports up to 30 items, so batch if needed
+    let usersSnapshotDocs: any[] = []
+    const batchSize = 30
+    for (let i = 0; i < userIds.length; i += batchSize) {
+      const batchIds = userIds.slice(i, i + batchSize)
+      if (batchIds.length > 0) {
+      const usersQuery = query(collection(db, "users"), where("id", "in", batchIds))
+      const batchSnapshot = await getDocs(usersQuery)
+      usersSnapshotDocs = usersSnapshotDocs.concat(batchSnapshot.docs)
+      }
+    }
+    // Create a mock usersSnapshot with .docs property for compatibility
+    // const usersSnapshot = { docs: usersSnapshotDocs }
+    // const usersSnapshot = await getDocs(usersQuery)
     const logs = logsSnapshot.docs.map((doc) => {
-      const user = usersSnapshot.docs.find((userDoc) => userDoc.id === doc.data().userId)
+      const user = usersSnapshotDocs.find((userDoc) => userDoc.id === doc.data().userId)
       return {
         id: doc.id,
         ...doc.data(),
@@ -1240,3 +1252,5 @@ export const globalSearch = async (searchQuery: string, userId: string) => {
     return { results: [], error: error.message }
   }
 }
+
+getActionLogsWithUsers

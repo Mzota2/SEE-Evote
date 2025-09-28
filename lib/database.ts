@@ -91,7 +91,9 @@ export const castVote = async (voteData: Omit<Vote, "id" | "timestamp" | "electi
     })
 
     // Log the vote action
-    await logAction(voteData.voterId, "VOTE_CAST", voteData.electionId, voteData.organizationId)
+    await logAction(voteData.voterId, "VOTE_CAST", voteData.electionId, voteData.organizationId, {
+      actionAt:serverTimestamp()
+    })
 
     return { success: true, voteId: docRef.id, error: null }
   } catch (error: any) {
@@ -252,6 +254,7 @@ export const logAction = async (
       timestamp: serverTimestamp(),
     })
   } catch (error) {
+    console.log(error);
     console.error("Failed to log action:", error)
   }
 }

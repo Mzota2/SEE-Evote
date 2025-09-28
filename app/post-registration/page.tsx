@@ -79,6 +79,7 @@ export default function PostRegistrationPage() {
         title: createForm.title,
         description: createForm.description,
         organizationId: createForm.organizationId.toUpperCase(),
+        totalVoters:createForm.totalVoters,
         startDate: new Date(createForm.startDate),
         endDate: new Date(createForm.endDate),
       })

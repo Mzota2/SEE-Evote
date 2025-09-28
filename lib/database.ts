@@ -466,10 +466,11 @@ export const getUserRoles = async (userId: string) => {
 // Get Election by Token
 export const getElectionByToken = async (electionToken: string) => {
   try {
+    //remove percentage % if the token contains it, it may confuse the system since a space is also a %
     const electionQuery = query(collection(db, "elections"), where("electionToken", "==", electionToken))
 
     const electionSnapshot = await getDocs(electionQuery)
-
+    console.log(electionSnapshot.empty);
     if (electionSnapshot.empty) {
       return { election: null, error: "Election not found" }
     }
@@ -479,11 +480,14 @@ export const getElectionByToken = async (electionToken: string) => {
     const election = {
       id: electionDoc.id,
       ...electionDoc.data(),
+      startDate:electionDoc?.data()?.startDate?.toDate(),
+      endDate:electionDoc?.data()?.endDate?.toDate()
     } as Election
 
     console.log(election)
     return { election, error: null }
   } catch (error: any) {
+    console.log(error);
     return { election: null, error: error.message }
   }
 }

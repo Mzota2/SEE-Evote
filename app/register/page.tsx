@@ -111,10 +111,7 @@ export default function RegisterPage() {
           <Card className="p-8 bg-ivote-gradient text-white flex flex-col justify-center">
             <div className="space-y-6">
               <div className="flex items-center gap-2">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-xl">i</span>
-                </div>
-                <span className="text-2xl font-bold">VOTE</span>
+  
               </div>
 
               <div className="space-y-4">

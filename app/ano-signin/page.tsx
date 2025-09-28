@@ -121,7 +121,7 @@ export default function AnonymousSignInPage() {
               <Button
                 type="submit"
                 disabled={loading || !votingID || !electionToken}
-                className="w-full bg-see-evote-primary hover:bg-see-evote-primary/90 text-white text-sm sm:text-base py-2 sm:py-3"
+                className="w-full bg-ivote-primary hover:bg-ivote-primary/90 active:bg-primary/90 text-white text-sm sm:text-base py-2 sm:py-3"
               >
                 {loading ? (
                   <>

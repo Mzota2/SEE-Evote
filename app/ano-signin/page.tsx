@@ -27,7 +27,7 @@ export default function AnonymousSignInPage() {
 
     try {
       const result = await voteTokenSignIn(votingID, electionToken)
-      console.log(result.error);
+      console.log(result.error)
       if (result?.success) {
         toast({
           title: "Anonymous Login Successful",
@@ -54,28 +54,38 @@ export default function AnonymousSignInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md">
         {/* Header */}
-        <div className="text-center mb-8">
-          <Link href='/' className="inline-flex items-center gap-2 mb-6">
-            <Image width={100} height={100} src="/see-evote-logo-transparent.png" alt="SEE-Evote Logo" className="h-12 w-auto" />
+        <div className="text-center mb-6 sm:mb-8">
+          <Link href="/" className="inline-flex items-center gap-2 mb-4 sm:mb-6">
+            <Image
+              width={100}
+              height={100}
+              src="/see-evote-logo-transparent.png"
+              alt="SEE-Evote Logo"
+              className="h-10 sm:h-12 w-auto"
+            />
           </Link>
         </div>
 
-        <Card className="p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-          <div className="space-y-6">
+        <Card className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+          <div className="space-y-4 sm:space-y-6">
             <div className="text-center space-y-2">
-              <div className="w-16 h-16 bg-ivote-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-8 h-8 text-ivote-primary" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-see-evote-primary/10 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-see-evote-primary" />
               </div>
-              <h1 className="text-2xl font-bold text-gray-800">Anonymous Voter Login</h1>
-              <p className="text-gray-600">Enter your credentials to cast your vote securely and anonymously</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Anonymous Voter Login</h1>
+              <p className="text-sm sm:text-base text-gray-600">
+                Enter your credentials to cast your vote securely and anonymously
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="votingID">Voting ID</Label>
+                <Label htmlFor="votingID" className="text-sm sm:text-base">
+                  Voting ID
+                </Label>
                 <Input
                   id="votingID"
                   type="text"
@@ -83,7 +93,7 @@ export default function AnonymousSignInPage() {
                   onChange={(e) => setVotingID(e.target.value)}
                   placeholder="Enter your Voting ID"
                   required
-                  className="w-full font-mono"
+                  className="w-full font-mono text-sm sm:text-base py-2 sm:py-3"
                 />
                 <p className="text-xs text-gray-500">
                   Your unique 8-character Voting ID provided by the election administrator
@@ -91,7 +101,9 @@ export default function AnonymousSignInPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="electionToken">Election Token</Label>
+                <Label htmlFor="electionToken" className="text-sm sm:text-base">
+                  Election Token
+                </Label>
                 <Input
                   id="electionToken"
                   type="text"
@@ -99,7 +111,7 @@ export default function AnonymousSignInPage() {
                   onChange={(e) => setElectionToken(e.target.value)}
                   placeholder="Enter Election Token"
                   required
-                  className="w-full font-mono"
+                  className="w-full font-mono text-sm sm:text-base py-2 sm:py-3"
                 />
                 <p className="text-xs text-gray-500">
                   The election token for the specific election you want to vote in
@@ -109,7 +121,7 @@ export default function AnonymousSignInPage() {
               <Button
                 type="submit"
                 disabled={loading || !votingID || !electionToken}
-                className="w-full bg-ivote-primary hover:bg-ivote-primary/90 text-white"
+                className="w-full bg-see-evote-primary hover:bg-see-evote-primary/90 text-white text-sm sm:text-base py-2 sm:py-3"
               >
                 {loading ? (
                   <>
@@ -135,28 +147,31 @@ export default function AnonymousSignInPage() {
                 </div>
               </div>
 
-              <Link href="/login" className="inline-flex items-center text-ivote-primary hover:underline font-medium">
+              <Link
+                href="/login"
+                className="inline-flex items-center text-see-evote-primary hover:underline font-medium text-sm sm:text-base"
+              >
                 <ArrowLeft className="w-4 h-4 mr-1" />
                 Back to Regular Login
               </Link>
             </div>
 
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Shield className="w-5 h-5 text-green-600 mt-0.5" />
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <h3 className="font-medium text-green-800 mb-2">Anonymous & Secure Voting</h3>
-                  <ul className="text-sm text-green-700 space-y-1">
+                  <h3 className="font-medium text-green-800 mb-2 text-sm sm:text-base">Anonymous & Secure Voting</h3>
+                  <ul className="text-xs sm:text-sm text-green-700 space-y-1">
                     <li className="flex items-center gap-2">
-                      <CheckCircle className="w-3 h-3" />
+                      <CheckCircle className="w-3 h-3 flex-shrink-0" />
                       Your identity remains completely anonymous
                     </li>
                     <li className="flex items-center gap-2">
-                      <CheckCircle className="w-3 h-3" />
+                      <CheckCircle className="w-3 h-3 flex-shrink-0" />
                       One-time use Voting ID ensures election integrity
                     </li>
                     <li className="flex items-center gap-2">
-                      <CheckCircle className="w-3 h-3" />
+                      <CheckCircle className="w-3 h-3 flex-shrink-0" />
                       Secure authentication without personal data
                     </li>
                   </ul>
@@ -164,9 +179,9 @@ export default function AnonymousSignInPage() {
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-medium text-blue-800 mb-2">How to Vote:</h3>
-              <ol className="text-sm text-blue-700 space-y-1">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+              <h3 className="font-medium text-blue-800 mb-2 text-sm sm:text-base">How to Vote:</h3>
+              <ol className="text-xs sm:text-sm text-blue-700 space-y-1">
                 <li>1. Get your unique Voting ID from your election administrator</li>
                 <li>2. Enter the Election Token for your specific election</li>
                 <li>3. Sign in anonymously to maintain voting privacy</li>

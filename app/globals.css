@@ -38,7 +38,7 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 
-  /* Added custom iVOTE brand colors */
+  /* Updated custom SEE-Evote brand colors */
   --ivote-primary: #4fc3e0;
   --ivote-secondary: #f5c242;
   --ivote-primary-rgb: 79, 195, 224;
@@ -120,7 +120,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Added custom iVOTE brand color utilities */
+  /* Updated custom SEE-Evote brand color utilities */
   --color-ivote-primary: var(--ivote-primary);
   --color-ivote-secondary: var(--ivote-secondary);
 }
@@ -134,7 +134,7 @@
   }
 }
 
-/* Added custom utility classes for iVOTE branding */
+/* Updated custom utility classes for SEE-Evote branding */
 @layer utilities {
   .bg-ivote-primary {
     background-color: var(--ivote-primary);

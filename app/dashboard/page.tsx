@@ -83,9 +83,9 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <Logo/>
+          <Logo />
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Hello, {user.name.split(" ")[0]}!</h1>
-          <p className="text-gray-600">Welcome to your iVOTE Dashboard</p>
+          <p className="text-gray-600">Welcome to your SEE-Evote Dashboard</p>
         </div>
 
         {loadingRoles ? (

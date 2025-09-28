@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
 import {
   getElectionByToken,
   getUserRoles,
@@ -19,9 +16,8 @@ import {
   updateElection,
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate, Vote } from "@/lib/types"
-import { VoteIcon, CheckCircle, Clock, AlertCircle } from "lucide-react"
+import { CheckCircle, Clock, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import Image from "next/image"
 import { VotingSection } from "@/components/voting/voting-section"
 
 interface VotePageProps {
@@ -55,8 +51,8 @@ export default function VotePage({ params }: VotePageProps) {
 
       try {
         const { election: fetchedElection } = await getElectionByToken(params.electionToken)
-        const { roles } = await getUserRoles(user.id);
-        console.log("roles", roles);
+        const { roles } = await getUserRoles(user.id)
+        console.log("roles", roles)
         const relevantRole = roles.find(
           (role) => role.electionToken === params.electionToken && role.status === "approved",
         )
@@ -70,56 +66,47 @@ export default function VotePage({ params }: VotePageProps) {
         const now = new Date()
         const startDate = new Date(fetchedElection.startDate)
         const endDate = new Date(fetchedElection.endDate)
-        
-        if (fetchedElection.status === 'closed' && !(now < startDate || now > endDate)) {
-          if(fetchedElection.id){
-                await updateElection(fetchedElection.id, {
-                    ...fetchedElection,
-                    status:'ongoing'
-                })
-            }
-        
-        }
-        
-        else if (fetchedElection.status === 'closed' &&(now < startDate || now > endDate)) {
+
+        if (fetchedElection.status === "closed" && !(now < startDate || now > endDate)) {
+          if (fetchedElection.id) {
+            await updateElection(fetchedElection.id, {
+              ...fetchedElection,
+              status: "ongoing",
+            })
+          }
+        } else if (fetchedElection.status === "closed" && (now < startDate || now > endDate)) {
           router.push(`/dashboard/${params.electionToken}`)
           return
-        }
-
-        else if ((fetchedElection.status === "ongoing") &&  (now < startDate || now > endDate)) {
+        } else if (fetchedElection.status === "ongoing" && (now < startDate || now > endDate)) {
           //check election status, if it is within the dates update status to ongoing
-            if(fetchedElection.id){
-                await updateElection(fetchedElection.id, {
-                    ...fetchedElection,
-                    status:'closed'
-                })
-            }
-            
+          if (fetchedElection.id) {
+            await updateElection(fetchedElection.id, {
+              ...fetchedElection,
+              status: "closed",
+            })
+          }
+
           router.push(`/dashboard/${params.electionToken}`)
           return
         }
 
         //check election status, if it is within the dates update status to ongoing
-        else if(fetchedElection.status === 'pending' && (!(now < startDate || now > endDate))){
-          if(fetchedElection.id){
-              await updateElection(fetchedElection.id, {
-                  ...fetchedElection,
-                  status:'ongoing'
-              })
+        else if (fetchedElection.status === "pending" && !(now < startDate || now > endDate)) {
+          if (fetchedElection.id) {
+            await updateElection(fetchedElection.id, {
+              ...fetchedElection,
+              status: "ongoing",
+            })
           }
-          
-        }
-
-        else if(fetchedElection.status === 'pending' && ((now < startDate || now > endDate))){
-          if(fetchedElection.id){
-              await updateElection(fetchedElection.id, {
-                  ...fetchedElection,
-                  status:'closed'
-              })
-              router.push(`/dashboard/${params.electionToken}`)
-              return
+        } else if (fetchedElection.status === "pending" && (now < startDate || now > endDate)) {
+          if (fetchedElection.id) {
+            await updateElection(fetchedElection.id, {
+              ...fetchedElection,
+              status: "closed",
+            })
+            router.push(`/dashboard/${params.electionToken}`)
+            return
           }
-          
         }
 
         setElection(fetchedElection)
@@ -129,7 +116,7 @@ export default function VotePage({ params }: VotePageProps) {
         const { candidates: fetchedCandidates } = await getElectionCandidates(fetchedElection.id)
         const { votes: fetchedUserVotes } = await getUserVotes(user.id, fetchedElection.id)
 
-        console.log("fetched user votes", fetchedUserVotes);
+        console.log("fetched user votes", fetchedUserVotes)
         setPositions(fetchedPositions)
         setCandidates(fetchedCandidates)
         setUserVotes(fetchedUserVotes)
@@ -172,7 +159,7 @@ export default function VotePage({ params }: VotePageProps) {
 
         // Refresh user votes
         const { votes: updatedUserVotes } = await getUserVotes(user.id, election.id)
-        console.log(updatedUserVotes);
+        console.log(updatedUserVotes)
         setUserVotes(updatedUserVotes)
 
         // Clear selection for this position
@@ -229,31 +216,33 @@ export default function VotePage({ params }: VotePageProps) {
 
   return (
     <DashboardLayout electionToken={params.electionToken} userRole={userRole.role}>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6 px-4 sm:px-0">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Cast Your Vote</h1>
-          <p className="text-gray-600">Make your voice heard in {election.title}</p>
-          <div className="flex items-center justify-center gap-4 mt-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Cast Your Vote</h1>
+          <p className="text-sm sm:text-base text-gray-600">Make your voice heard in {election.title}</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mt-4">
             <Badge variant="secondary" className="bg-green-100 text-green-800">
               <Clock className="w-3 h-3 mr-1" />
               Voting Open
             </Badge>
-            <span className="text-sm text-gray-500">Until {new Date(election.endDate).toLocaleDateString()}</span>
+            <span className="text-xs sm:text-sm text-gray-500">
+              Until {new Date(election.endDate).toLocaleDateString()}
+            </span>
           </div>
         </div>
 
         {/* Voting Progress */}
-        <Card className="p-6 bg-blue-50 border-blue-200">
-          <div className="flex items-center justify-between">
+        <Card className="p-4 sm:p-6 bg-blue-50 border-blue-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             <div>
-              <h3 className="font-semibold text-blue-800">Voting Progress</h3>
-              <p className="text-sm text-blue-600">
+              <h3 className="font-semibold text-blue-800 text-sm sm:text-base">Voting Progress</h3>
+              <p className="text-xs sm:text-sm text-blue-600">
                 {userVotes.length} of {positions.length} positions voted
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-blue-800">
+            <div className="text-center sm:text-right">
+              <div className="text-xl sm:text-2xl font-bold text-blue-800">
                 {Math.round((userVotes.length / positions.length) * 100)}%
               </div>
               <p className="text-xs text-blue-600">Complete</p>
@@ -268,14 +257,20 @@ export default function VotePage({ params }: VotePageProps) {
         </Card>
 
         {/* Positions and Voting */}
-        <VotingSection election={election} positions={positions} userVotes={userVotes} setUserVotes={setUserVotes} getCandidatesForPosition={getCandidatesForPosition}/>
+        <VotingSection
+          election={election}
+          positions={positions}
+          userVotes={userVotes}
+          setUserVotes={setUserVotes}
+          getCandidatesForPosition={getCandidatesForPosition}
+        />
 
         {/* Completion Message */}
         {userVotes.length === positions.length && (
-          <Card className="p-6 bg-green-50 border-green-200 text-center">
-            <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-green-800 mb-2">Voting Complete!</h3>
-            <p className="text-green-700">
+          <Card className="p-4 sm:p-6 bg-green-50 border-green-200 text-center">
+            <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-600 mx-auto mb-4" />
+            <h3 className="text-lg sm:text-xl font-bold text-green-800 mb-2">Voting Complete!</h3>
+            <p className="text-sm sm:text-base text-green-700">
               You have successfully cast your votes for all positions. Thank you for participating in {election.title}.
             </p>
           </Card>

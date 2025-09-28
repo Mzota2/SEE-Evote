@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Card } from "@/components/ui/card"
 import { getUserRoles } from "@/lib/database"
-import { Role } from "@/lib/types"
+import type { Role } from "@/lib/types"
 
 interface ElectionDashboardPageProps {
   params: {
@@ -17,46 +17,41 @@ export default function GuidelinesPage({ params }: ElectionDashboardPageProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [userRole, setUserRole] = useState<Role | null>(null)
-  const [loadingData, setLoadingData] =useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadingData, setLoadingData] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login")
     }
-
-
   }, [user, loading, router])
 
-   useEffect(() => {
-  
-  
-      const fetchUserRole = async () => {
-        if (!user) return
-        try {
-          // Fetch user roles to verify access
-          const { roles } = await getUserRoles(user.id)
-          const relevantRole = roles.find(
-            (role) => (role.electionToken === params.electionToken) && (role.status === "approved"),
-          )
-  
-          if (!relevantRole) {
-            setError("You don't have access to this election")
-            setLoadingData(false)
-            return
-          }
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (!user) return
+      try {
+        // Fetch user roles to verify access
+        const { roles } = await getUserRoles(user.id)
+        const relevantRole = roles.find(
+          (role) => role.electionToken === params.electionToken && role.status === "approved",
+        )
 
-          setUserRole(relevantRole)
+        if (!relevantRole) {
+          setError("You don't have access to this election")
           setLoadingData(false)
-  
-        } catch (err) {
-          setError("Failed to load election data")
-          setLoadingData(false)
+          return
         }
+
+        setUserRole(relevantRole)
+        setLoadingData(false)
+      } catch (err) {
+        setError("Failed to load election data")
+        setLoadingData(false)
       }
-  
-      fetchUserRole()
-    }, [user, params.electionToken])
+    }
+
+    fetchUserRole()
+  }, [user, params.electionToken])
 
   if (loading || !user) {
     return (
@@ -124,7 +119,7 @@ export default function GuidelinesPage({ params }: ElectionDashboardPageProps) {
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-gray-800">For help information</h3>
-                  <p className="text-gray-600">Please contact: ivote@email.com</p>
+                  <p className="text-gray-600">Please contact: see-evote@email.com</p>
                 </div>
               </div>
             </div>

@@ -172,4 +172,34 @@
   .bg-ivote-gradient {
     background: linear-gradient(135deg, var(--ivote-primary), var(--ivote-secondary));
   }
+
+  
+
+   .bg-see-evote-primary {
+    background-color: var(--see-evote-primary);
+  }
+
+  .bg-see-evote-secondary {
+    background-color: var(--see-evote-secondary);
+  }
+
+  .text-see-evote-primary {
+    color: var(--see-evote-primary);
+  }
+
+  .text-see-evote-secondary {
+    color: var(--see-evote-secondary);
+  }
+
+  .border-see-evote-primary {
+    border-color: var(--see-evote-primary);
+  }
+
+  .border-see-evote-secondary {
+    border-color: var(--see-evote-secondary);
+  }
+
+  .bg-see-evote-gradient {
+    background: linear-gradient(135deg, var(--see-evote-primary), var(--see-evote-secondary));
+  }
 }

@@ -134,23 +134,42 @@ export function ElectionAnalytics({
   })
 
   // Voting trends (mock data based on audit logs)
-  const votingTrends: VotingTrend[] = []
+  const votingTrendsbyDate: VotingTrend[] = []
+  const votingTrendsbyHour: VotingTrend[] = []
   const voteActions = auditLogs.filter((log) => log.action === "VOTE_CAST")
 
   // Group votes by date
+  // Votes by date
   const votesByDate: Record<string, number> = {}
   voteActions.forEach((log) => {
     const date = new Date(log.timestamp).toLocaleDateString()
     votesByDate[date] = (votesByDate[date] || 0) + 1
   })
 
-  let cumulative = 0
+  // Votes by hour (across all days)
+  const votesByHour: Record<string, number> = {}
+  voteActions.forEach((log) => {
+    const hour = new Date(log.timestamp).getHours().toString().padStart(2, "0") + ":00"
+    votesByHour[hour] = (votesByHour[hour] || 0) + 1
+  })
+
+  let cumulativeDate = 0
+  let cumulativeHour = 0
   Object.entries(votesByDate).forEach(([date, votes]) => {
-    cumulative += votes
-    votingTrends.push({
+    cumulativeDate += votes
+    votingTrendsbyDate.push({
       date,
       votes,
-      cumulative,
+      cumulative:cumulativeDate,
+    })
+  })
+
+   Object.entries(votesByHour).forEach(([date, votes]) => {
+    cumulativeHour += votes
+    votingTrendsbyHour.push({
+      date,
+      votes,
+      cumulative:cumulativeHour,
     })
   })
 
@@ -284,7 +303,7 @@ export function ElectionAnalytics({
     }
 
     // Voting Trend chart
-    if (votingTrends.length > 0) {
+    if (votingTrendsbyDate.length > 0) {
       // Create a canvas for the voting trend chart
       const canvas = document.createElement("canvas")
       canvas.width = 400
@@ -302,24 +321,24 @@ export function ElectionAnalytics({
         // Draw cumulative votes line
         ctx.strokeStyle = "#F59E0B"
         ctx.beginPath()
-        votingTrends.forEach((trend, idx) => {
-          const x = 40 + (idx * (340 / (votingTrends.length - 1 || 1)))
-          const y = 120 - (trend.cumulative / Math.max(...votingTrends.map(t => t.cumulative)) * 100)
+        votingTrendsbyDate.forEach((trend, idx) => {
+          const x = 40 + (idx * (340 / (votingTrendsbyDate.length - 1 || 1)))
+          const y = 120 - (trend.cumulative / Math.max(...votingTrendsbyDate.map(t => t.cumulative)) * 100)
           if (idx === 0) ctx.moveTo(x, y)
           else ctx.lineTo(x, y)
         })
         ctx.stroke()
         // Draw daily votes bars
         ctx.fillStyle = "#EF4444"
-        votingTrends.forEach((trend, idx) => {
-          const x = 40 + (idx * (340 / (votingTrends.length - 1 || 1)))
-          const barHeight = (trend.votes / Math.max(...votingTrends.map(t => t.votes)) * 100)
+        votingTrendsbyDate.forEach((trend, idx) => {
+          const x = 40 + (idx * (340 / (votingTrendsbyDate.length - 1 || 1)))
+          const barHeight = (trend.votes / Math.max(...votingTrendsbyDate.map(t => t.votes)) * 100)
           ctx.fillRect(x - 5, 120 - barHeight, 10, barHeight)
         })
         // Add labels
         ctx.font = "10px Arial"
-        votingTrends.forEach((trend, idx) => {
-          const x = 40 + (idx * (340 / (votingTrends.length - 1 || 1)))
+        votingTrendsbyDate.forEach((trend, idx) => {
+          const x = 40 + (idx * (340 / (votingTrendsbyDate.length - 1 || 1)))
           ctx.fillStyle = "#333"
           ctx.fillText(trend.date, x - 10, 135)
         })
@@ -384,7 +403,7 @@ export function ElectionAnalytics({
     doc.setFontSize(14);
     doc.text("Voting Trends", 14, y);
     doc.setFontSize(12);
-    votingTrends.forEach((trend, i) => {
+    votingTrendsbyDate.forEach((trend, i) => {
       doc.text(
         `${trend.date}: ${trend.votes} votes, Cumulative: ${trend.cumulative}`,
         14,
@@ -414,7 +433,7 @@ export function ElectionAnalytics({
         totalVotes,
         positions: analyticsData,
         topCandidates: topCandidatesData,
-        votingTrends,
+        votingTrendsbyDate,
       },
       timestamp: new Date().toISOString(),
     }
@@ -469,7 +488,7 @@ export function ElectionAnalytics({
           </div>
           <div className="text-center">
             <div className="text-3xl font-bold text-orange-600">
-              {totalVotes > 0 ? Math.round((totalVotes / (positions.length * (election?.totalVoters))) * 100) : 0}%
+              {totalVotes > 0 ? Math.round((totalVotes / (positions.length * (election?.totalVoters?election.totalVoters:100))) * 100) : 0}%
             </div>
             <p className="text-sm text-gray-600">Avg Turnout</p>
           </div>
@@ -577,17 +596,43 @@ export function ElectionAnalytics({
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="w-5 h-5 text-orange-600" />
-            <h3 className="text-lg font-semibold">Voting Activity</h3>
+            <h3 className="text-lg font-semibold">Voting Activity by Date</h3>
           </div>
-          {votingTrends.length > 0 ? (
+          {votingTrendsbyDate.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={votingTrends}>
+              <AreaChart data={votingTrendsbyDate}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip />
                 <Area type="monotone" dataKey="cumulative" stroke="#F59E0B" fill="#FEF3C7" name="Cumulative Votes" />
                 <Line type="monotone" dataKey="votes" stroke="#EF4444" name="Daily Votes" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-300 flex items-center justify-center text-gray-500">
+              <div className="text-center">
+                <Activity className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No voting activity data available</p>
+              </div>
+            </div>
+          )}
+        </Card>
+
+         <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="w-5 h-5 text-orange-600" />
+            <h3 className="text-lg font-semibold">Voting Activity by Hour</h3>
+          </div>
+          {votingTrendsbyHour.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={votingTrendsbyHour}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Area type="monotone" dataKey="cumulative" stroke="#F59E0B" fill="#FEF3C7" name="Cumulative Votes" />
+                <Line type="monotone" dataKey="votes" stroke="#EF4444" name="Hourly Votes" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (

@@ -45,7 +45,7 @@ export function CandidateModal({ candidate, isOpen, onClose }: CandidateModalPro
 
             <div className="flex-1 space-y-2">
               <h2 className="text-2xl font-bold text-gray-800">{candidate.name}</h2>
-              {/* <p className="text-lg text-gray-600">for {candidate.position}</p> */}
+              <p className="text-lg text-gray-600">{candidate.description}</p>
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <div className="flex items-center gap-1">
                   <span>🎓</span>

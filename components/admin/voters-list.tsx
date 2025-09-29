@@ -163,7 +163,7 @@ export function VotersList({ voters, loading, onVotersUpdate, electionToken }: V
       })}
 
       {/* Modal for ManageVoters */}
-      {showManage && selectedVoter && (
+      {showManage && selectedVoter &&(selectedVoter.id === voter?.id) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
           <div ref={modalRef} className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
             <button

@@ -19,15 +19,27 @@ export function VotersList({ voters, loading, onVotersUpdate, electionToken }: V
   const [showManage, setShowManage] = useState(false);
   const [selectedVoter, setSelectedVoter] = useState<User | null>(null);
   const [voterRole, setVoterRole] = useState<Role | null>(null);
+  const [voterRoles, setVoterRoles] = useState<Role[]>([]);
 
   const handleApprove = async (voterId: string) => {
     try {
       if (!voterId || !electionToken) return;
       await approveVoter(voterId, electionToken)
-      await handlegetVoterRoles(voterId);
+      await fetchVoterRoles();
       setShowManage(false)
+      console.log("approved how many times");
     } catch (error) {
       console.log(error);
+    }
+  }
+
+  const handlegetVoterRole = (voterId: string) => {
+    try {
+      if (!voterRoles.length) return;
+      const foundRole = voterRoles.find((role) => role.userId === voterId);
+      return foundRole;
+    } catch (error) {
+      console.log(error)
     }
   }
 
@@ -35,6 +47,7 @@ export function VotersList({ voters, loading, onVotersUpdate, electionToken }: V
     try {
       if (!voterId || !electionToken) return;
       const { roles: fetchedRoles } = await getVoterRole(voterId, electionToken)
+
       setVoterRole(fetchedRoles[0]);
     } catch (error) {
       console.log(error)
@@ -45,13 +58,30 @@ export function VotersList({ voters, loading, onVotersUpdate, electionToken }: V
     try {
       if (!voterId || !electionToken) return;
       await disapproveVoter(voterId, electionToken)
-      await handlegetVoterRoles(voterId);
+      await fetchVoterRoles();
       setShowManage(false)
     } catch (error) {
       console.log(error);
     }
   }
-
+ const fetchVoterRoles = async () => {
+      if (!voters?.length || !electionToken) return;
+      try {
+      const rolesResults = await Promise.all(
+        voters.map(async (voter) => {
+        const { roles: fetchedRoles } = await getVoterRole(voter.id, electionToken);
+        return {...fetchedRoles[0] };
+        })
+      );
+      setVoterRoles(rolesResults);
+      } catch (error) {
+      console.log(error);
+      }
+    };
+  useEffect(()=>{
+   
+    fetchVoterRoles();
+  }, [electionToken, voters])
   useEffect(() => {
     if (selectedVoter) {
       handlegetVoterRoles(selectedVoter.id)
@@ -100,7 +130,7 @@ export function VotersList({ voters, loading, onVotersUpdate, electionToken }: V
   return (
     <div className="space-y-4 relative">
       {voters.map((voter) => {
-        const role = voterRole; // fallback if you have role in voter
+        const role = handlegetVoterRole(voter.id); // fallback if you have role in voter
         return (
           <Card key={voter.id} className="p-6 relative">
             <div className="flex items-center justify-between">
@@ -163,7 +193,7 @@ export function VotersList({ voters, loading, onVotersUpdate, electionToken }: V
       })}
 
       {/* Modal for ManageVoters */}
-      {showManage && selectedVoter &&(selectedVoter.id === voter?.id) && (
+      {showManage && selectedVoter  && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
           <div ref={modalRef} className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
             <button

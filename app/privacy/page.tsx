@@ -1,42 +1,88 @@
+"use client"
+import { Menu, X } from "lucide-react"
+import type React from "react"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
 export default function PrivacyPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50">
       {/* Header */}
-      <header className="flex items-center justify-between p-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-3">
-          <Link href="/">
-            <img src="/see-evote-logo.png" alt="SEE-Evote Logo" className="h-12 w-auto cursor-pointer" />
+      <header className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between">
+          <Link href={'/'} className="flex items-center gap-3">
+            <img src="/see-evote-logo-transparent.png" alt="SEE-Evote Logo" className="h-12 w-auto" />
           </Link>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-4">
+            <Link href="/about" className="text-gray-600 hover:text-gray-800">
+              About
+            </Link>
+            <Link href="/contact" className="text-gray-600 hover:text-gray-800">
+              Contact Us
+            </Link>
+            <Link href="/privacy" className="text-gray-600 hover:text-gray-800">
+              Privacy
+            </Link>
+            <Link href="/terms" className="text-gray-600 hover:text-gray-800">
+              Terms
+            </Link>
+            <Link href="/login">
+              <Button
+                variant="outline"
+                className="border-ivote-primary text-ivote-primary hover:bg-ivote-primary hover:text-white bg-transparent"
+              >
+                Log In
+              </Button>
+            </Link>
+            <Link href="/register">
+              <Button className="bg-ivote-primary hover:bg-ivote-primary/90 text-white">Register</Button>
+            </Link>
+          </div>
+
+          {/* Mobile Menu Button */}
+          <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
-        <div className="flex items-center gap-4">
-          <Link href="/about" className="text-gray-600 hover:text-gray-800">
-            About
-          </Link>
-          <Link href="/contact" className="text-gray-600 hover:text-gray-800">
-            Contact Us
-          </Link>
-          <Link href="/privacy" className="text-ivote-primary font-semibold">
-            Privacy
-          </Link>
-          <Link href="/terms" className="text-gray-600 hover:text-gray-800">
-            Terms
-          </Link>
-          <Link href="/login">
-            <Button
-              variant="outline"
-              className="border-ivote-primary text-ivote-primary hover:bg-ivote-primary hover:text-white bg-transparent"
-            >
-              Log In
-            </Button>
-          </Link>
-          <Link href="/register">
-            <Button className="bg-ivote-primary hover:bg-ivote-primary/90 text-white">Register</Button>
-          </Link>
-        </div>
+
+        {/* Mobile Navigation */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-4 p-4 bg-white rounded-lg shadow-lg">
+            <div className="flex flex-col space-y-4">
+              <Link href="/about" className="text-gray-600 hover:text-gray-800 py-2">
+                About
+              </Link>
+              <Link href="/contact" className="text-gray-600 hover:text-gray-800 py-2">
+                Contact Us
+              </Link>
+              <Link href="/privacy" className="text-gray-600 hover:text-gray-800 py-2">
+                Privacy
+              </Link>
+              <Link href="/terms" className="text-gray-600 hover:text-gray-800 py-2">
+                Terms
+              </Link>
+              <Link href="/login" className="py-2">
+                <Button
+                  variant="outline"
+                  className="w-full border-ivote-primary text-ivote-primary hover:bg-ivote-primary hover:text-white bg-transparent"
+                >
+                  Log In
+                </Button>
+              </Link>
+              <Link href="/register" className="py-2">
+                <Button className="w-full bg-ivote-primary hover:bg-ivote-primary/90 text-white">Register</Button>
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}

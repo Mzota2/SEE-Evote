@@ -33,11 +33,11 @@ export function NotificationCenter() {
     try {
       const { notifications: userNotifications, error } = await getUserNotifications(user.id)
       if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load notifications",
-          variant: "destructive",
-        })
+        // toast({
+        //   title: "Error",
+        //   description: "Failed to load notifications",
+        //   variant: "destructive",
+        // })
       } else {
         setNotifications(userNotifications as Notification[])
       }

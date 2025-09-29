@@ -19,7 +19,7 @@ export function CandidateCard({ candidate, isSelected, onSelect, onViewDetails }
     >
       <div className="space-y-3 sm:space-y-4">
         {/* Candidate Image */}
-        <div className="w-32 h-32 sm:w-80 sm:h-80 mx-auto rounded-full overflow-hidden bg-gray-200 border-4 border-b-ivote-secondary">
+        <div className="w-48 h-48 sm:w-80 sm:h-80 mx-auto rounded-full overflow-hidden bg-gray-200 border-4 border-b-ivote-secondary">
           {candidate.image ? (
             <img
               src={candidate.image || "/placeholder.svg"}

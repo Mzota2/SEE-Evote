@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { VoterDashboard } from "@/components/dashboard/voter-dashboard"
 import { AdminDashboard } from "@/components/dashboard/admin-dashboard"
-import { getActionLogsWithUsers, getCastedVotes, getElectionByToken, getElectionCandidates, getElectionPositions, getRegisteredVoters, getUserRoles } from "@/lib/database"
+import { deleteAllLogs, deleteAllVoterIDs, getActionLogsWithUsers, getCastedVotes, getElectionByToken, getElectionCandidates, getElectionPositions, getRegisteredVoters, getUserRoles } from "@/lib/database"
 import type { AuditLog, AuditLogWithUser, Candidate, Election, Position, Role, Vote } from "@/lib/types"
 
 interface ElectionDashboardPageProps {
@@ -32,6 +32,7 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
     if (!loading && !user) {
       router.push("/login")
     }
+    
   }, [user, loading, router])
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
 
         const { positions: fetchedPositions, error: positionsError } = await getElectionPositions(electionId);
         if (positionsError) {
-          setError("Positions not found or access denied")
+          // setError("Positions not found or access denied")
           setLoadingData(false)
           return
         }
@@ -63,7 +64,7 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
         const { candidates: fetchedCandidates, error: candidatesError } = await getElectionCandidates(electionId);
         if (candidatesError) {
           console.log(candidatesError);
-          setError("Candidates not found or access denied")
+          // setError("Candidates not found or access denied")
           setLoadingData(false)
           return
         }
@@ -75,25 +76,25 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
       }
     }
 
-    const fetchAuditLogs = async(electionId:string)=>{
-      if (!user) return
+    // const fetchAuditLogs = async(electionId:string)=>{
+    //   if (!user) return
 
-      try {
-        // Fetch election data
-        const {logs: fetchedLogs, error: logsError } = await getActionLogsWithUsers(electionId);
-        if (logsError) {
-          console.log(logsError);
-          setError("Failed to load audit logs")
-          setLoadingData(false)
-          return
-        }
-        setAuditLogs(fetchedLogs)
+    //   try {
+    //     // Fetch election data
+    //     const {logs: fetchedLogs, error: logsError } = await getActionLogsWithUsers(electionId);
+    //     if (logsError) {
+    //       console.log(logsError);
+    //       setError("Failed to load audit logs")
+    //       setLoadingData(false)
+    //       return
+    //     }
+    //     setAuditLogs(fetchedLogs)
 
-      } catch (err) {
-        setError("Failed to load audit logs")
-        setLoadingData(false)
-      }
-    }
+    //   } catch (err) {
+    //     setError("Failed to load audit logs")
+    //     setLoadingData(false)
+    //   }
+    // }
 
     const fetchElectionData = async () => {
       if (!user) return
@@ -101,6 +102,7 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
       try {
         // Fetch election data
         const { election: fetchedElection, error: electionError } = await getElectionByToken(params.electionToken)
+        
         if(fetchedElection){
           const {voters:fetchedRegisteredVotes} = await getRegisteredVoters(fetchedElection.id);
           const {votes:fetchedVotes} = await getCastedVotes(fetchedElection?.id);
@@ -130,7 +132,7 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
         setLoadingData(false);
         await fetchCandidatesData(fetchedElection.id);
         await fetchPositionsData(fetchedElection.id);
-        await fetchAuditLogs(fetchedElection.id);
+        // await fetchAuditLogs(fetchedElection.id);
 
       } catch (err) {
         setError("Failed to load election data")

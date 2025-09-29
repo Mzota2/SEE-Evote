@@ -62,6 +62,7 @@ export default function VotersPage({ params }: ElectionDashboardPageProps) {
   useEffect(() => {
     const fetchVoters = async () => {
       if (user && (userRole?.role === "admin" || userRole?.role === "superAdmin")) {
+        console.log(userRole.organizationId);
         const { users: fetchedUsers, error } = await getUsersByOrganization(userRole.organizationId)
         console.log('voters',fetchedUsers)
         console.log(error);
@@ -92,7 +93,7 @@ export default function VotersPage({ params }: ElectionDashboardPageProps) {
           <p className="text-gray-600">Manage registered voters and their permissions</p>
         </div>
 
-        <VotersList voters={voters} loading={loadingVoters} onVotersUpdate={setVoters} />
+        <VotersList electionToken={userRole.electionId} voters={voters} loading={loadingVoters} onVotersUpdate={setVoters} />
       </div>
     </DashboardLayout>
   )

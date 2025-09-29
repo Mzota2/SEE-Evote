@@ -27,7 +27,10 @@ export default function RegisterPage() {
     region: "",
     street: "",
     city: "",
-    organization: "",
+    school:"",
+    department:"",
+    program:"",
+    studentId:"",
     agreeToTerms: false,
   })
   const [loading, setLoading] = useState(false)
@@ -70,10 +73,13 @@ export default function RegisterPage() {
         street: formData.street,
         city: formData.city,
       },
-      organization: formData.organization,
+      studentId:formData.studentId,
+      school:formData.school,
+      department:formData.department,
+      program:formData.program,
     }
     const { user, error } = await signUp(formData.email, formData.password, userData)
-    console.log(error)
+    console.log("register",error);
     if (error) {
       toast({
         title: "Registration Failed",
@@ -122,15 +128,20 @@ export default function RegisterPage() {
 
               <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <h3 className="font-semibold mb-2 text-sm sm:text-base">Voters ID No.</h3>
+                  <h3 className="font-semibold mb-2 text-sm sm:text-base">Voters ID No. <span className="text-red-300 text-sm">*</span></h3>
                   <Input
-                    placeholder="Voters ID No..."
+                    required
+                    id="studentId"
+                    name="studentId"
+                    placeholder="BECE/22/SS/004"
+                    value={formData.studentId}
+                    onChange={handleInputChange}
                     className="bg-white/10 border-white/20 text-white placeholder:text-white/60 text-sm sm:text-base py-2 sm:py-3"
                   />
                 </div>
 
                 <div>
-                  <h3 className="font-semibold mb-2 text-sm sm:text-base">Create password</h3>
+                  <h3 className="font-semibold mb-2 text-sm sm:text-base">Create password <span className="text-red-300 text-sm">*</span></h3>
                   <p className="text-xs sm:text-sm text-white/80 mb-2">
                     Create a strong password with a mix of letters, numbers and symbols.
                   </p>
@@ -208,7 +219,7 @@ export default function RegisterPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName" className="text-xs sm:text-sm font-medium">
-                    FIRST NAME
+                    FIRST NAME <span className="text-red-300 text-sm">*</span>
                   </Label>
                   <Input
                     id="firstName"
@@ -222,7 +233,7 @@ export default function RegisterPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="middleName" className="text-xs sm:text-sm font-medium">
-                    MIDDLE NAME
+                    MIDDLE NAME 
                   </Label>
                   <Input
                     id="middleName"
@@ -235,7 +246,7 @@ export default function RegisterPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="lastName" className="text-xs sm:text-sm font-medium">
-                    LAST NAME
+                    LAST NAME <span className="text-red-300 text-sm">*</span>
                   </Label>
                   <Input
                     id="lastName"
@@ -280,7 +291,7 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-xs sm:text-sm font-medium">
-                  EMAIL
+                  EMAIL <span className="text-red-300 text-sm">*</span>
                 </Label>
                 <Input
                   id="email"
@@ -294,19 +305,55 @@ export default function RegisterPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="organization" className="text-xs sm:text-sm font-medium">
-                  ORGANIZATION
-                </Label>
-                <Input
-                  id="organization"
-                  name="organization"
-                  value={formData.organization}
-                  onChange={handleInputChange}
-                  placeholder="Organization"
-                  className="text-sm sm:text-base py-2 sm:py-3"
-                />
+              <div className="grid grid-cols-3 gap-3">
+
+                <div className="space-y-2">
+                  <Label htmlFor="school" className="text-xs sm:text-sm font-medium">
+                    SCHOOL <span className="text-red-300 text-sm">*</span>
+                  </Label>
+                  <Input
+                    id="school"
+                    name="school"
+                    value={formData.school}
+                    onChange={handleInputChange}
+                    placeholder="School of Engineering"
+                    className="text-sm sm:text-base py-2 sm:py-3"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="department" className="text-xs sm:text-sm font-medium">
+                    DEPARTMENT <span className="text-red-300 text-sm">*</span>
+                  </Label>
+                  <Input
+                    id="department"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleInputChange}
+                    placeholder="Electrical Engineering"
+                    className="text-sm sm:text-base py-2 sm:py-3"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="program" className="text-xs sm:text-sm font-medium">
+                    PROGRAM <span className="text-red-300 text-sm">*</span>
+                  </Label>
+                  <Input
+                    id="program"
+                    name="program"
+                    value={formData.program}
+                    onChange={handleInputChange}
+                    placeholder="Electrical Engineering"
+                    className="text-sm sm:text-base py-2 sm:py-3"
+                    required
+                  />
+                </div>
+
               </div>
+              
 
               <div className="space-y-3 sm:space-y-4">
                 <Label className="text-sm sm:text-base font-medium">CURRENT ADDRESS</Label>

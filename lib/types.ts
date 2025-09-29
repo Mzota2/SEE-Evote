@@ -9,6 +9,10 @@ export interface User {
     street?: string
     city?: string
   }
+  studentId?: string
+  department?: string
+  school?: string
+  program?: string
   createdAt: Date
   profileImage?: string
   isActive: boolean

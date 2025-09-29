@@ -9,10 +9,12 @@ import {
   doc,
   updateDoc,
   getDoc,
+  deleteDoc,
 } from "firebase/firestore"
 import { db, supabase } from "./firebase"
 import type { Election, Vote, Organization, User, Role, Position, Candidate, AuditLogWithUser, VoterID } from "./types"
 import { nanoid } from "nanoid"
+import { User } from "lucide-react"
 
 // Election Management
 export const createElection = async (electionData: Omit<Election, "id" | "createdAt" | "approval">) => {
@@ -56,7 +58,6 @@ export const getElections = async (organizationId?: string) => {
     return { elections: [], error: error.message }
   }
 }
-
 // Update Election
 
 export const updateElection = async (electionId: string, electionData: Partial<Election>) => {
@@ -91,9 +92,9 @@ export const castVote = async (voteData: Omit<Vote, "id" | "timestamp" | "electi
     })
 
     // Log the vote action
-    await logAction(voteData.voterId, "VOTE_CAST", voteData.electionId, voteData.organizationId, {
-      actionAt:serverTimestamp()
-    })
+    // await logAction(voteData.voterId, "VOTE_CAST", voteData.electionId, voteData.organizationId, {
+    //   actionAt:serverTimestamp()
+    // })
 
     return { success: true, voteId: docRef.id, error: null }
   } catch (error: any) {
@@ -297,16 +298,30 @@ export const getActionLogsWithUsers = async (electionId: string) => {
 // User Management
 export const getUsersByOrganization = async (organizationId: string) => {
   try {
-    const usersQuery = query(collection(db, "users"), where("organizationId", "==", organizationId))
+    const rolesQuery = query(collection(db, "roles"), where("organizationId", "==", organizationId))
+    const rolesSnapshot = await getDocs(rolesQuery)
+    const userIds = rolesSnapshot.docs.map((roleDoc) => roleDoc.data().userId)
 
-    const usersSnapshot = await getDocs(usersQuery)
-    const users = usersSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data()?.createdAt?.toDate()
-    })) as User[]
+    let usersList: User[] = []
+    if (userIds.length > 0) {
+      // Firestore 'in' query supports up to 30 items, so batch if needed
+      const batchSize = 30
+      for (let i = 0; i < userIds.length; i += batchSize) {
+      const batchIds = userIds.slice(i, i + batchSize)
+      const usersQuery = query(collection(db, "users"), where("id", "in", batchIds))
+      const usersSnapshot = await getDocs(usersQuery)
+      usersList = usersList.concat(
+        usersSnapshot.docs.map((userDoc) => ({
+        id: userDoc.id,
+        ...userDoc.data(),
+        createdAt: userDoc.data()?.createdAt?.toDate(),
+        } as User))
+      )
+      }
+    }
+    console.log(usersList);
 
-    return { users, error: null }
+    return { users:usersList, error: null }
   } catch (error: any) {
     return { users: [], error: error.message }
   }
@@ -352,15 +367,15 @@ export const joinElectionByToken = async (userId: string, electionToken: string)
       electionToken,
       organizationId: election.organizationId,
       role: "voter",
-      status: "approved",
+      status: "pending",//changed from approved to pending
       createdAt: serverTimestamp(),
     })
 
     // Log the action
-    await logAction(userId, "JOIN_ELECTION", election.id, election.organizationId, {
-      electionToken,
-      electionTitle: election.title,
-    })
+    // await logAction(userId, "JOIN_ELECTION", election.id, election.organizationId, {
+    //   electionToken,
+    //   electionTitle: election.title,
+    // })
 
     return { success: true, election }
   } catch (error: any) {
@@ -465,7 +480,7 @@ export const checkOrganizationExists = async (searchTerm: string): Promise<strin
 export const getUserRoles = async (userId: string) => {
   try {
     console.log(userId);
-    const rolesQuery = query(collection(db, "roles"), where("userId", "==", userId))
+    const rolesQuery = query(collection(db, "roles"), where("userId", "==", userId), orderBy("createdAt", "desc"))
     const rolesSnapshot = await getDocs(rolesQuery)
     const roles = rolesSnapshot.docs.map((doc) => {
       return {
@@ -479,6 +494,61 @@ export const getUserRoles = async (userId: string) => {
     return { roles: [], error: error.message }
   }
 }
+
+export const getVoterRole = async (voterId: string, electionToken:string) => {
+  try {
+    const rolesQuery = query(collection(db, "roles"), where("userId", "==", voterId), where("electionId", "==", electionToken))
+    const rolesSnapshot = await getDocs(rolesQuery)
+    const roles = rolesSnapshot.docs.map((doc) => {
+      return {
+        id: doc.id,
+        ...doc.data(),
+      } as Role
+    })
+    return { roles, error: null }
+  } catch (error: any) {
+    return { roles: [], error: error.message }
+  }
+}
+
+export const approveVoter = async (voterId: string, electionToken: string) => {
+  try {
+    console.log('db voterID', voterId);
+    const rolesQuery = query(collection(db, "roles"), where("userId", "==", voterId), where("electionId", "==", electionToken));
+    const rolesSnapshot = await getDocs(rolesQuery)
+    const roles = rolesSnapshot.docs.map((doc) => {
+      console.log(doc.data())
+      return {
+        id: doc.id,
+        ...doc.data(),
+      } as Role
+    })
+    console.log(roles);
+    await updateDoc(doc(db, "roles", roles[0].id), { status: "approved" })
+    return { error: null }
+  } catch (error: any) {
+    return { error: error.message }
+  }
+}
+
+export const disapproveVoter = async (voterId: string, electionToken:string) => {
+  try {
+    const rolesQuery = query(collection(db, "roles"), where("userId", "==", voterId), where("electionId", "==", electionToken))
+    const rolesSnapshot = await getDocs(rolesQuery)
+    const roles = rolesSnapshot.docs.map((doc) => {
+      return {
+        id: doc.id,
+        ...doc.data(),
+      } as Role
+    })
+    await updateDoc(doc(db, "roles", roles[0].id), { status: "rejected" })
+    return { error: null }
+  } catch (error: any) {
+    return { error: error.message }
+  }
+}
+
+
 
 // Get Election by Token
 export const getElectionByToken = async (electionToken: string) => {
@@ -537,16 +607,16 @@ export const approveElectionRequest = async (electionId: string, superAdminId: s
       })
 
       // Send notification to the admin
-      await sendNotification(roleDoc.data().userId, "ELECTION_APPROVED", {
-        electionTitle: "Your election request has been approved",
-        electionToken: roleDoc.data().electionToken,
-      })
+      // await sendNotification(roleDoc.data().userId, "ELECTION_APPROVED", {
+      //   electionTitle: "Your election request has been approved",
+      //   electionToken: roleDoc.data().electionToken,
+      // })
     }
 
-    // Log the action
-    await logAction(superAdminId, "APPROVE_ELECTION", electionId, undefined, {
-      electionId,
-    })
+    // // Log the action
+    // await logAction(superAdminId, "APPROVE_ELECTION", electionId, undefined, {
+    //   electionId,
+    // })
 
     return { success: true }
   } catch (error: any) {
@@ -1085,6 +1155,30 @@ export const getGeneratedVoterIDs = async (electionId: string) => {
     return { voterIDs, error: null }
   } catch (error: any) {
     return { voterIDs: [], error: error.message }
+  }
+}
+
+export const deleteAllVoterIDs = async(electionId: string) => {
+  try {
+    const q = query(collection(db, "voterIDs"), where("electionId", "==", electionId))
+    const querySnapshot = await getDocs(q)
+    const delRequests = querySnapshot.docs.map((doc) => deleteDoc(doc.ref));
+    await Promise.all(delRequests);
+    return { success: true, error: null }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export const deleteAllLogs = async(electionId: string) => {
+  try {
+    const q = query(collection(db, "auditLogs"), where("electionId", "==", electionId))
+    const querySnapshot = await getDocs(q)
+    const delRequests = querySnapshot.docs.map((doc) => deleteDoc(doc.ref));
+    await Promise.all(delRequests);
+    return { success: true, error: null }
+  } catch (error: any) {
+    return { success: false, error: error.message }
   }
 }
 

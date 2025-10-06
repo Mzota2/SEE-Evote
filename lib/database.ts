@@ -47,8 +47,8 @@ export const getElections = async (organizationId?: string) => {
     const elections = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-      startDate: doc.data()?.startDate?.toDate().toISOString(),
-      endDate: doc.data()?.endDate?.toDate().toISOString(),
+      startDate: doc.data()?.startDate?.toDate(),
+      endDate: doc.data()?.endDate?.toDate(),
     })) as Election[]
 
     console.log(elections)
@@ -798,8 +798,8 @@ export const getElectionPositions = async (electionId: string) => {
     const positions = positionsSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-      updatedAt: doc.data()?.updatedAt?.toDate().toISOString(),
-      createdAt: doc.data()?.createdAt?.toDate().toISOString(),
+      updatedAt: doc.data()?.updatedAt?.toDate(),
+      createdAt: doc.data()?.createdAt?.toDate(),
     })) as Position[]
 
     console.log(positions)
@@ -879,8 +879,8 @@ export const getElectionCandidates = async (electionId: string) => {
     const candidatesSnapshot = await getDocs(candidatesQuery)
     const candidates = candidatesSnapshot.docs.map((doc) => ({
       id: doc.id,
-      createdAt: doc.data()?.createdAt?.toDate().toISOString(),
-      updatedAt: doc.data()?.updatedAt?.toDate().toISOString(),
+      createdAt: doc.data()?.createdAt?.toDate(),
+      updatedAt: doc.data()?.updatedAt?.toDate(),
       ...doc.data(),
     })) as Candidate[]
 
@@ -1064,9 +1064,9 @@ export const getAllElections = async () => {
     const elections = electionsSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-      startDate: doc.data()?.startDate?.toDate().toISOString(),
-      endDate: doc.data()?.endDate?.toDate().toISOString(),
-      createdAt: doc.data()?.createdAt?.toDate().toISOString(),
+      startDate: doc.data()?.startDate?.toDate(),
+      endDate: doc.data()?.endDate?.toDate(),
+      createdAt: doc.data()?.createdAt?.toDate(),
     })) as Election[]
 
     return { elections, error: null }
@@ -1083,7 +1083,7 @@ export const getAllUsers = async () => {
     const users = usersSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-      createdAt: doc.data()?.createdAt?.toDate().toISOString(),
+      createdAt: doc.data()?.createdAt?.toDate(),
     })) as User[]
 
     return { users, error: null }
@@ -1100,7 +1100,7 @@ export const getAllOrganizations = async () => {
     const organizations = orgsSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-      createdAt: doc.data()?.createdAt?.toDate().toISOString(),
+      createdAt: doc.data()?.createdAt?.toDate(),
     })) as Organization[]
 
     return { organizations, error: null }
@@ -1147,9 +1147,9 @@ export const getGeneratedVoterIDs = async (electionId: string) => {
     const voterIDs = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-      timestamp: doc.data()?.timestamp?.toDate().toISOString(),
-      expiresAt: doc.data()?.expiresAt?.toDate ? doc.data().expiresAt.toDate().toISOString() : doc.data().expiresAt,
-      votedAt: doc.data()?.votedAt?.toDate().toISOString(),
+      timestamp: doc.data()?.timestamp?.toDate(),
+      expiresAt: doc.data()?.expiresAt?.toDate ? doc.data().expiresAt.toDate() : doc.data().expiresAt,
+      votedAt: doc.data()?.votedAt?.toDate(),
     })) as VoterID[]
     console.log('voterIDs', voterIDs);
     return { voterIDs, error: null }

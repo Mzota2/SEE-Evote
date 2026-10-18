@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress"
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts"
 import { Users, Vote, Clock, CheckCircle, AlertCircle } from "lucide-react"
 import type { Role } from "@/lib/types"
+import { displayElectionToken } from "@/lib/utils"
 
 interface DashboardAnalyticsProps {
   roles: Role[]
@@ -29,7 +30,7 @@ export function DashboardAnalytics({ roles }: DashboardAnalyticsProps) {
 
   // Mock election stats (in real app, this would come from database)
   const electionStats: ElectionStats[] = activeElections.map((role) => ({
-    name: role.electionToken,
+    name: displayElectionToken(role.electionToken),
     status: "active",
     votes: Math.floor(Math.random() * 500), // Mock data
     positions: Math.floor(Math.random() * 10) + 1,
@@ -192,7 +193,7 @@ export function DashboardAnalytics({ roles }: DashboardAnalyticsProps) {
             <tbody>
               {roles.map((role) => (
                 <tr key={role.id} className="border-b">
-                  <td className="py-2 font-mono text-xs">{role.electionToken}</td>
+                  <td className="py-2 font-mono text-xs">{displayElectionToken(role.electionToken)}</td>
                   <td className="text-center py-2">
                     <Badge variant="secondary" className="capitalize">
                       {role.role}

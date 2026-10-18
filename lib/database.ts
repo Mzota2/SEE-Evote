@@ -15,7 +15,7 @@ import { db } from "./firebase"
 import { uploadImageToCloudinary } from "./cloudinary"
 import { isOrganizationMemberEmail, parseOrganizationEmail } from "./org-email"
 import type { Election, Vote, Organization, User, Role, Position, Candidate, AuditLogWithUser, VoterID } from "./types"
-import { omitUndefined } from "./utils"
+import { displayElectionToken, omitUndefined } from "./utils"
 import { toFriendlyMessage } from "./user-messages"
 import { nanoid } from "nanoid"
 import { User } from "lucide-react"
@@ -1393,7 +1393,7 @@ export const globalSearch = async (searchQuery: string, userId: string) => {
           id: election.id,
           type: "election",
           title: election.title,
-          subtitle: `Token: ${election.electionToken}`,
+          subtitle: `Token: ${displayElectionToken(election.electionToken)}`,
           description: election.description,
           electionToken: election.electionToken,
           metadata: { status: election.status },

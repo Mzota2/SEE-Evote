@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import { signOut } from "@/lib/auth"
-import { cn } from "@/lib/utils"
+import { cn, displayElectionToken } from "@/lib/utils"
 import {
   Home,
   Vote,
@@ -116,7 +116,7 @@ export function Sidebar({ electionToken, userRole, isOpen = false, onClose }: Si
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-800 truncate">{user.name}</p>
                   <p className="text-sm text-gray-600 capitalize">{userRole}</p>
-                  {electionToken && <p className="text-xs text-gray-500 font-mono truncate">{electionToken}</p>}
+                  {electionToken && <p className="text-xs text-gray-500 font-mono truncate">{displayElectionToken(electionToken)}</p>}
                 </div>
               </div>
             </div>

@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast"
 import { updateUserProfile, getUserRoles } from "@/lib/database"
 import type { User, Role } from "@/lib/types"
 import { UserIcon, Calendar, Shield, Edit2, Save, X } from "lucide-react"
+import { displayElectionToken } from "@/lib/utils"
 
 export default function ProfilePage() {
   const { user, loading } = useAuth()
@@ -212,7 +213,7 @@ export default function ProfilePage() {
                           >
                             {role.role}
                           </Badge>
-                          <span className="font-medium">Election: {role.electionToken}</span>
+                          <span className="font-medium">Election: {displayElectionToken(role.electionToken)}</span>
                         </div>
                         <p className="text-sm text-gray-600 mt-1">
                           Status:{" "}

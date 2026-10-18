@@ -24,7 +24,7 @@ import {
   revokeNonOrganisationMembers,
 } from "@/lib/database"
 import type { Election, Role, VoterID } from "@/lib/types"
-import { electionTokensMatch } from "@/lib/utils"
+import { displayElectionToken, electionTokensMatch } from "@/lib/utils"
 import {
   Settings,
   Calendar,
@@ -355,7 +355,7 @@ export default function ElectionSettingsPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Election code</Label>
-                      <Input value={election.electionToken} disabled className="font-mono" />
+                      <Input value={displayElectionToken(election.electionToken)} disabled className="font-mono" />
                       <ShareElectionDialog election={election} />
                     </div>
                   </div>

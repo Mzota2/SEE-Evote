@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import type { Candidate, Election, Position, Role } from "@/lib/types"
 import { Users, Calendar, Vote, Clock, CheckCircle } from "lucide-react"
 import Link from "next/link"
+import { displayElectionToken } from "@/lib/utils"
 import moment from 'moment'
 
 interface VoterDashboardProps {
@@ -191,7 +192,7 @@ export function VoterDashboard({ election, userRole, candidates, positions, regi
           </div>
           <div>
             <h3 className="font-medium text-gray-700">Election Token</h3>
-            <p className="text-gray-600 font-mono text-sm bg-gray-50 p-2 rounded">{election.electionToken}</p>
+            <p className="text-gray-600 font-mono text-sm bg-gray-50 p-2 rounded">{displayElectionToken(election.electionToken)}</p>
           </div>
           <div>
             <h3 className="font-medium text-gray-700">Your Role</h3>

@@ -19,6 +19,7 @@ import {
   getAllOrganizations,
 } from "@/lib/database"
 import { toFriendlyMessage } from "@/lib/user-messages"
+import { displayElectionToken } from "@/lib/utils"
 import type { Election, User, Organization } from "@/lib/types"
 import { Clock, CheckCircle, XCircle, Calendar, Building, Copy, Users, Vote, Shield } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -448,7 +449,7 @@ function ElectionReviewCard({
 
         <div className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
           <span className="text-sm text-gray-500">Election code</span>
-          <span className="font-mono text-sm text-gray-800">{election.electionToken}</span>
+          <span className="font-mono text-sm text-gray-800">{displayElectionToken(election.electionToken)}</span>
           <Button type="button" variant="ghost" size="sm" onClick={onCopy}>
             <Copy className="w-4 h-4 mr-1" />
             Copy

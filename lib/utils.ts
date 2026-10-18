@@ -22,13 +22,19 @@ export function electionTokensMatch(left?: string | null, right?: string | null)
 }
 
 function compactElectionToken(value: string) {
+  return displayElectionToken(value).replace(/\s+/g, "")
+}
+
+/** Show a space instead of the encoded %20 that appears in election codes. */
+export function displayElectionToken(value?: string | null) {
+  if (!value) return ""
   let token = value
   try {
-    token = decodeURIComponent(value)
+    token = decodeURIComponent(token)
   } catch {
     token = value
   }
-  return token.replace(/\s+/g, "")
+  return token.replace(/%20/gi, " ")
 }
 
 /** Firestore rejects undefined field values. Drop them before every write. */

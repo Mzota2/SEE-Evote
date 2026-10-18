@@ -13,6 +13,7 @@ import Link from "next/link"
 import Logo from "@/components/Logo/Logo"
 import { OrgEmailRecovery } from "@/components/auth/org-email-recovery"
 import { DEFAULT_ORG_DOMAIN } from "@/lib/org-email"
+import { displayElectionToken } from "@/lib/utils"
 
 export default function DashboardPage() {
   const { user, loading } = useAuth()
@@ -125,7 +126,7 @@ export default function DashboardPage() {
 
           <div className="space-y-1">
             <h3 className="font-semibold text-gray-800">{election?.title || "Election"}</h3>
-            <p className="text-sm text-gray-600 font-mono bg-gray-50 p-2 rounded">{role.electionToken}</p>
+            <p className="text-sm text-gray-600 font-mono bg-gray-50 p-2 rounded">{displayElectionToken(role.electionToken)}</p>
           </div>
 
           {role.revokedReason === "organisation_email" ? (

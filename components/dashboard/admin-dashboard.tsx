@@ -7,6 +7,7 @@ import type { AuditLogWithUser, Candidate, Election, Position, Role, Vote as Vot
 import { Users, Calendar, Vote, Settings, BarChart, FileText, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import { ShareElectionDialog } from "@/components/elections/share-election-dialog"
+import { displayElectionToken } from "@/lib/utils"
 
 interface AdminDashboardProps {
   election: Election
@@ -187,7 +188,7 @@ export function AdminDashboard({ election, userRole, positions, candidates, logs
                   <div className="text-xs text-gray-500">By: {log.name || "Unknown User"}</div>
                 </div>
                 <div className="ml-auto">
-                  <Badge className="bg-gray-100 text-gray-800">{log.electionToken}</Badge>
+                  <Badge className="bg-gray-100 text-gray-800">{displayElectionToken(log.electionToken)}</Badge>
                 </div>
                 <div className="ml-auto">
                   <Badge className="bg-gray-100 text-gray-800">{log.electionId}</Badge>

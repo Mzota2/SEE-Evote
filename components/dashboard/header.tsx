@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { NotificationCenter } from "@/components/notifications/notification-center"
 import { GlobalSearch } from "@/components/search/global-search"
 import Link from "next/link"
+import { displayElectionToken } from "@/lib/utils"
 
 interface HeaderProps {
   electionToken?: string
@@ -49,7 +50,7 @@ export function Header({ electionToken, userRole, onMenuClick }: HeaderProps) {
           {electionToken && (
             <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full">
               <span className="text-xs text-gray-600">Election:</span>
-              <span className="text-xs font-mono text-gray-800 max-w-20 md:max-w-none truncate">{electionToken}</span>
+              <span className="text-xs font-mono text-gray-800 max-w-20 md:max-w-none truncate">{displayElectionToken(electionToken)}</span>
             </div>
           )}
 

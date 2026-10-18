@@ -158,7 +158,7 @@ export function ShareElectionDialog({ election }: { election: Election }) {
           </div>
         </div>
 
-        <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm break-all text-gray-700">{link}</div>
+        <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm break-all text-gray-700">{link.replace(/%20/gi, " ")}</div>
 
         <div className="grid grid-cols-2 gap-2">
           <Button type="button" variant="outline" onClick={copyLink}>

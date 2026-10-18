@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { VoterDashboard } from "@/components/dashboard/voter-dashboard"
 import { AdminDashboard } from "@/components/dashboard/admin-dashboard"
+import { VoterWaiting } from "@/components/elections/voter-waiting"
 import { deleteAllLogs, deleteAllVoterIDs, getActionLogsWithUsers, getCastedVotes, getElectionByToken, getElectionCandidates, getElectionPositions, getRegisteredVoters, getUserRoles } from "@/lib/database"
 import type { AuditLog, AuditLogWithUser, Candidate, Election, Position, Role, Vote } from "@/lib/types"
 
@@ -27,6 +28,7 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
   const [castedVotes, setCastedVotes] = useState<Vote[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [access, setAccess] = useState<"ready" | "waiting" | "rejected" | "review" | "missing">("ready")
 
   useEffect(() => {
     if (!loading && !user) {
@@ -103,39 +105,55 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
         // Fetch election data
         const { election: fetchedElection, error: electionError } = await getElectionByToken(params.electionToken)
         
-        if(fetchedElection){
-          const {voters:fetchedRegisteredVotes} = await getRegisteredVoters(fetchedElection.id);
-          const {votes:fetchedVotes} = await getCastedVotes(fetchedElection?.id);
-          setRegisteredVoters(fetchedRegisteredVotes?.length ? fetchedRegisteredVotes : []);
-          setCastedVotes(fetchedVotes);
-        }
         if (electionError || !fetchedElection) {
-          setError("Election not found or access denied")
+          setError("We could not find this election.")
           setLoadingData(false)
           return
         }
 
-        // Fetch user roles to verify access
         const { roles } = await getUserRoles(user.id)
-        const relevantRole = roles.find(
-          (role) => (role.electionToken === params.electionToken) && (role.status === "approved"),
-        )
+        const relevantRole = roles.find((role) => role.electionToken === params.electionToken)
 
         if (!relevantRole) {
-          setError("You don't have access to this election")
+          setElection(fetchedElection)
+          setAccess("missing")
           setLoadingData(false)
           return
         }
 
         setElection(fetchedElection)
         setUserRole(relevantRole)
-        setLoadingData(false);
+
+        if (relevantRole.status === "pending" && relevantRole.role === "voter") {
+          setAccess("waiting")
+          setLoadingData(false)
+          return
+        }
+
+        if (relevantRole.status === "rejected" && relevantRole.role === "voter") {
+          setAccess("rejected")
+          setLoadingData(false)
+          return
+        }
+
+        if (relevantRole.status !== "approved") {
+          setAccess("review")
+          setLoadingData(false)
+          return
+        }
+
+        const { voters: fetchedRegisteredVotes } = await getRegisteredVoters(fetchedElection.id)
+        const { votes: fetchedVotes } = await getCastedVotes(fetchedElection.id)
+        setRegisteredVoters(fetchedRegisteredVotes?.length ? fetchedRegisteredVotes : [])
+        setCastedVotes(fetchedVotes)
+        setAccess("ready")
+        setLoadingData(false)
         await fetchCandidatesData(fetchedElection.id);
         await fetchPositionsData(fetchedElection.id);
         // await fetchAuditLogs(fetchedElection.id);
 
       } catch (err) {
-        setError("Failed to load election data")
+        setError("We could not open this election. Please try again.")
         console.log(err);
         console.log(error)
         setLoadingData(false)
@@ -156,11 +174,49 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
     )
   }
 
+  if ((access === "waiting" || access === "rejected") && election) {
+    return <VoterWaiting election={election} rejected={access === "rejected"} />
+  }
+
+  if (access === "review" && election) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="max-w-md text-center space-y-3">
+          <h2 className="text-xl font-semibold text-gray-800">This election is still being reviewed</h2>
+          <p className="text-gray-600">You can manage it after it has been approved.</p>
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="bg-ivote-primary text-white px-4 py-2 rounded hover:bg-ivote-primary/90"
+          >
+            Back to your elections
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (access === "missing" && election) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="max-w-md text-center space-y-3">
+          <h2 className="text-xl font-semibold text-gray-800">You have not joined yet</h2>
+          <p className="text-gray-600">Open the invitation and confirm that you want to join. You can vote after the organiser approves your voting rights.</p>
+          <button
+            onClick={() => router.push(`/join/${encodeURIComponent(params.electionToken)}`)}
+            className="bg-ivote-primary text-white px-4 py-2 rounded hover:bg-ivote-primary/90"
+          >
+            Open the invitation
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (error || !election || !userRole) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Access Denied</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Election unavailable</h2>
           <p className="text-gray-600 mb-4">{error || "Unable to access this election"}</p>
           <button
             onClick={() => router.push("/dashboard")}

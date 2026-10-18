@@ -2,8 +2,9 @@ export interface User {
   id: string
   email: string
   name: string
-  birthday: Date
-  contactNumber: string
+  voterId: string
+  birthday?: Date
+  contactNumber?: string
   address?: {
     region?: string
     street?: string
@@ -13,10 +14,15 @@ export interface User {
   department?: string
   school?: string
   program?: string
+  intakeYear?: string
+  orgLocalName?: string
+  organizationDomain?: string
+  organizationId?: string
   createdAt: Date
   profileImage?: string
   isActive: boolean
-  agreeToTerms:boolean
+  agreeToTerms: boolean
+  authProvider?: "password" | "google"
 }
 
 export interface Role {
@@ -30,6 +36,8 @@ export interface Role {
   createdAt: Date
   approvedBy?: string
   approvedAt?: Date
+  revokedReason?: "organisation_email"
+  statusBeforeRevoke?: "pending" | "approved"
 }
 
 export interface Election {
@@ -47,10 +55,13 @@ export interface Election {
   approval: 'pending' | 'approved' | 'rejected',
   resultsVisible:boolean
   totalVoters?:number
+  backgroundImage?: string
+  orgMembersOnly?: boolean
+  organizationDomain?: string
   createdAt: Date
   approvedBy?: string
   approvedAt?: Date
-  
+  rejectionReason?: string
 }
 
 export interface Position {

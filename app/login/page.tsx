@@ -3,13 +3,17 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { signIn } from "@/lib/auth"
+import { PasswordInput } from "@/components/auth/password-input"
+import { GoogleAuthButton } from "@/components/auth/google-auth-button"
+import { OrgEmailHint } from "@/components/auth/org-email-hint"
+import { signIn, signInWithGoogle } from "@/lib/auth"
+import { safeNextPath } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 
@@ -18,109 +22,121 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextPath = safeNextPath(searchParams.get("next"))
   const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-
-    const { user, error } = await signIn(email, password)
-
+  const finishSignIn = (error: string | null, hasUser: boolean) => {
     if (error) {
       toast({
-        title: "Login Failed",
+        title: "Could not sign in",
         description: error,
         variant: "destructive",
       })
-    } else if (user) {
+      return
+    }
+
+    if (hasUser) {
       toast({
         title: "Login Successful",
         description: "Welcome back!",
       })
-      router.push("/dashboard")
+      router.push(nextPath || "/dashboard")
     }
+  }
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    const { user, error } = await signIn(email, password)
+    finishSignIn(error, !!user)
+    setLoading(false)
+  }
+
+  const handleGoogle = async () => {
+    setLoading(true)
+    const { user, error } = await signInWithGoogle("login")
+    finishSignIn(error, !!user)
     setLoading(false)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-amber-50 flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4 sm:mb-6">
+        <div className="text-center mb-6">
+          <Link href="/" className="inline-flex items-center gap-2">
             <Image
-              width={100}
-              height={100}
+              width={140}
+              height={140}
               src="/see-evote-logo-transparent.png"
               alt="SEE-Evote Logo"
-              className="h-10 sm:h-12 w-auto"
+              className="h-16 w-auto"
             />
           </Link>
         </div>
 
-        <Card className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-          <div className="space-y-4 sm:space-y-6">
+        <Card className="p-6 sm:p-8 bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+          <div className="space-y-5">
             <div className="text-center space-y-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Welcome Back!</h1>
-              <p className="text-sm sm:text-base text-gray-600">Sign in to your account to continue</p>
+              <h1 className="text-2xl font-bold text-gray-800">Welcome back</h1>
+              <p className="text-sm text-gray-600">Sign in to vote or manage an election</p>
+            </div>
+
+            <GoogleAuthButton
+              label={loading ? "Please wait..." : "Login with Google"}
+              onClick={handleGoogle}
+              disabled={loading}
+              className="w-full"
+            />
+
+            <div className="flex items-center gap-3 text-xs text-gray-400">
+              <div className="h-px flex-1 bg-gray-200" />
+              or use email
+              <div className="h-px flex-1 bg-gray-200" />
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm sm:text-base">
-                  Email Address
-                </Label>
+                <Label htmlFor="email">Email address</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="bece22-yourname@mubas.ac.mw"
                   required
-                  className="w-full text-sm sm:text-base py-2 sm:py-3"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm sm:text-base">
-                  Password
-                </Label>
-                <Input
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Link href="/forgot-password" className="text-xs text-see-evote-primary hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+                <PasswordInput
                   id="password"
-                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
-                  className="w-full text-sm sm:text-base py-2 sm:py-3"
                 />
               </div>
 
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-ivote-primary hover:bg-ivote-primary/90 active:bg-primary/90 text-white text-sm sm:text-base py-2 sm:py-3"
-              >
-                {loading ? "Signing In..." : "SIGN IN"}
+              <Button type="submit" disabled={loading} className="w-full bg-ivote-primary hover:bg-ivote-primary/90 text-white">
+                {loading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
 
-            <div className="text-center space-y-2">
-              <p className="text-sm sm:text-base text-gray-600">
-                Don't have an account?{" "}
-                <Link href="/register" className="text-see-evote-primary hover:underline font-medium">
-                  Sign up here
-                </Link>
-              </p>
+            <OrgEmailHint />
 
-              <Link
-                href="/ano-signin"
-                className="text-see-evote-primary hover:underline font-medium text-sm sm:text-base"
-              >
-                Anonymous Sign In
+            <p className="text-center text-sm text-gray-600">
+              Don&apos;t have an account?{" "}
+              <Link href={nextPath ? `/register?next=${encodeURIComponent(nextPath)}` : "/register"} className="text-see-evote-primary hover:underline font-medium">
+                Sign up
               </Link>
-            </div>
+            </p>
           </div>
         </Card>
       </div>

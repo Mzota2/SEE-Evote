@@ -27,8 +27,6 @@ export default function ProfilePage() {
       setFormData({
         name: user.name,
         email: user.email,
-        contactNumber: user.contactNumber,
-        address: user.address,
         profileImage: user.profileImage,
       })
 
@@ -40,8 +38,8 @@ export default function ProfilePage() {
   const loadUserRoles = async () => {
     if (!user) return
     try {
-      const roles = await getUserRoles(user.id)
-      setUserRoles(roles)
+      const result = await getUserRoles(user.id)
+      setUserRoles(result.roles)
     } catch (error) {
       console.error("Error loading user roles:", error)
     }
@@ -81,8 +79,6 @@ export default function ProfilePage() {
       setFormData({
         name: user.name,
         email: user.email,
-        contactNumber: user.contactNumber,
-        address: user.address,
         profileImage: user.profileImage,
       })
     }
@@ -181,82 +177,12 @@ export default function ProfilePage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email || ""}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    disabled={!isEditing}
-                  />
+                  <Input id="email" type="email" value={formData.email || ""} disabled />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Contact Number</Label>
-                  <Input
-                    id="phone"
-                    value={formData.contactNumber || ""}
-                    onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="birthday">Birthday</Label>
-                  <Input
-                    id="birthday"
-                    type="date"
-                    value={user.birthday ? new Date(user.birthday).toISOString().split("T")[0] : ""}
-                    disabled={true}
-                  />
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="space-y-4">
-                <Label className="text-base font-semibold">Address</Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="province">Province</Label>
-                    <Input
-                      id="province"
-                      value={formData.address?.province || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          address: { ...formData.address!, province: e.target.value },
-                        })
-                      }
-                      disabled={!isEditing}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      value={formData.address?.city || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          address: { ...formData.address!, city: e.target.value },
-                        })
-                      }
-                      disabled={!isEditing}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="barangay">Barangay</Label>
-                    <Input
-                      id="barangay"
-                      value={formData.address?.barangay || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          address: { ...formData.address!, barangay: e.target.value },
-                        })
-                      }
-                      disabled={!isEditing}
-                    />
-                  </div>
+                  <Label htmlFor="voterId">Voter ID</Label>
+                  <Input id="voterId" value={user.voterId || "Assigned automatically"} disabled />
                 </div>
               </div>
             </CardContent>

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import type { AuditLogWithUser, Candidate, Election, Position, Role, Vote as VoteType } from "@/lib/types"
 import { Users, Calendar, Vote, Settings, BarChart, FileText, TrendingUp } from "lucide-react"
 import Link from "next/link"
+import { ShareElectionDialog } from "@/components/elections/share-election-dialog"
 
 interface AdminDashboardProps {
   election: Election
@@ -45,7 +46,8 @@ export function AdminDashboard({ election, userRole, positions, candidates, logs
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <ShareElectionDialog election={election} />
             <Link href={`/dashboard/${userRole.electionToken}/manage`}>
               <Button variant="outline" size="sm">
                 <Settings className="w-4 h-4 mr-2" />
@@ -54,6 +56,16 @@ export function AdminDashboard({ election, userRole, positions, candidates, logs
             </Link>
           </div>
         </div>
+      </Card>
+
+      <Card className="p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800">Invite voters</h2>
+          <p className="text-sm text-gray-600">
+            Share a link that already includes the election code. Voters confirm joining, then wait for you to approve their voting rights.
+          </p>
+        </div>
+        <ShareElectionDialog election={election} />
       </Card>
 
       {/* Quick Actions */}

@@ -61,7 +61,16 @@ export function VoterDashboard({ election, userRole, candidates, positions, regi
   return (
     <div className="space-y-6">
       {/* Election Header */}
-      <Card className="p-6">
+      <Card className="overflow-hidden">
+        <div
+          className="aspect-video w-full bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: election.backgroundImage
+              ? `linear-gradient(180deg, rgba(15,23,42,0.05), rgba(15,23,42,0.35)), url(${election.backgroundImage})`
+              : "linear-gradient(135deg, #4fc3e0, #f5c242)",
+          }}
+        />
+        <div className="p-6">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
@@ -83,6 +92,7 @@ export function VoterDashboard({ election, userRole, candidates, positions, regi
               </div>
             </div>
           </div>
+        </div>
         </div>
       </Card>
 

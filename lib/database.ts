@@ -11,8 +11,12 @@ import {
   getDoc,
   deleteDoc,
 } from "firebase/firestore"
-import { db, supabase } from "./firebase"
+import { db } from "./firebase"
+import { uploadImageToCloudinary } from "./cloudinary"
+import { isOrganizationMemberEmail, parseOrganizationEmail } from "./org-email"
 import type { Election, Vote, Organization, User, Role, Position, Candidate, AuditLogWithUser, VoterID } from "./types"
+import { omitUndefined } from "./utils"
+import { toFriendlyMessage } from "./user-messages"
 import { nanoid } from "nanoid"
 import { User } from "lucide-react"
 
@@ -246,14 +250,14 @@ export const logAction = async (
   details?: Record<string, any>,
 ) => {
   try {
-    await addDoc(collection(db, "auditLogs"), {
+    await addDoc(collection(db, "auditLogs"), omitUndefined({
       userId,
       action,
       electionId,
       organizationId,
       details,
       timestamp: serverTimestamp(),
-    })
+    }))
   } catch (error) {
     console.log(error);
     console.error("Failed to log action:", error)
@@ -331,21 +335,29 @@ export const getUsersByOrganization = async (organizationId: string) => {
 // Join Election by Token
 export const joinElectionByToken = async (userId: string, electionToken: string) => {
   try {
-    // Find election by token
-    const electionQuery = query(
-      collection(db, "elections"),
-      where("electionToken", "==", electionToken),
-      where("approval", "==", "approved"),
-    )
+    const token = electionToken.trim()
+    if (!token) {
+      return { success: false, error: "Enter an election token" }
+    }
 
+    // Single-field lookup. A token-plus-approval query needs a composite index and
+    // fails closed with "invalid token" while that index is missing.
+    const electionQuery = query(collection(db, "elections"), where("electionToken", "==", token))
     const electionSnapshot = await getDocs(electionQuery)
 
     if (electionSnapshot.empty) {
-      return { success: false, error: "Invalid election token or election not found" }
+      return { success: false, error: "That election code was not found. Check it and try again." }
     }
 
     const electionDoc = electionSnapshot.docs[0]
     const election = { id: electionDoc.id, ...electionDoc.data() } as Election
+
+    if (election.approval && election.approval !== "approved") {
+      return {
+        success: false,
+        error: "This election is still waiting to be approved. You can join after it is approved.",
+      }
+    }
 
     // Check if user already has a role in this election
     const existingRoleQuery = query(
@@ -357,17 +369,39 @@ export const joinElectionByToken = async (userId: string, electionToken: string)
     const existingRoleSnapshot = await getDocs(existingRoleQuery)
 
     if (!existingRoleSnapshot.empty) {
-      return { success: false, error: "You are already registered for this election" }
+      const existingStatus = String(existingRoleSnapshot.docs[0].data().status || "")
+      return {
+        success: false,
+        alreadyJoined: true,
+        roleStatus: existingStatus,
+        error:
+          existingStatus === "pending"
+            ? "You have already joined. The organiser still needs to approve your voting rights before you can vote."
+            : "You have already joined this election.",
+      }
+    }
+
+    if (election.orgMembersOnly) {
+      const userSnap = await getDoc(doc(db, "users", userId))
+      const email = userSnap.exists() ? String(userSnap.data().email || "") : ""
+      const domain = election.organizationDomain || "mubas.ac.mw"
+
+      if (!isOrganizationMemberEmail(email, domain)) {
+        return {
+          success: false,
+          error: `This election is only for organisation members. Sign in with an email like bece22-yourname@${domain}.`,
+        }
+      }
     }
 
     // Create voter role
     await addDoc(collection(db, "roles"), {
       userId,
       electionId: election.id,
-      electionToken,
+      electionToken: token,
       organizationId: election.organizationId,
       role: "voter",
-      status: "pending",//changed from approved to pending
+      status: "pending",
       createdAt: serverTimestamp(),
     })
 
@@ -379,7 +413,10 @@ export const joinElectionByToken = async (userId: string, electionToken: string)
 
     return { success: true, election }
   } catch (error: any) {
-    return { success: false, error: error.message }
+    return {
+      success: false,
+      error: toFriendlyMessage(error, "We could not join this election. Check the code and try again."),
+    }
   }
 }
 
@@ -392,6 +429,10 @@ export const requestElectionWorkspace = async (
     organizationId: string
     startDate: Date
     endDate: Date
+    totalVoters?: string | number
+    orgMembersOnly?: boolean
+    organizationDomain?: string
+    backgroundImage?: string
   },
 ) => {
   try {
@@ -432,6 +473,10 @@ export const requestElectionWorkspace = async (
       createdAt: serverTimestamp(),
       positions: [],
       candidates: [],
+      totalVoters: Number(workspaceData.totalVoters) || 0,
+      orgMembersOnly: !!workspaceData.orgMembersOnly,
+      organizationDomain: workspaceData.organizationDomain || "mubas.ac.mw",
+      backgroundImage: workspaceData.backgroundImage || "",
     })
 
     // Create pending admin role
@@ -453,7 +498,7 @@ export const requestElectionWorkspace = async (
 
     return { success: true, electionId: electionDocRef.id, electionToken }
   } catch (error: any) {
-    return { success: false, error: error.message }
+    return { success: false, error: toFriendlyMessage(error, "We could not submit your election. Please try again.") }
   }
 }
 
@@ -511,8 +556,92 @@ export const getVoterRole = async (voterId: string, electionToken:string) => {
   }
 }
 
+export const revokeNonOrganisationMembers = async (electionId: string, domain: string) => {
+  try {
+    const rolesSnapshot = await getDocs(query(collection(db, "roles"), where("electionId", "==", electionId)))
+    let revoked = 0
+
+    for (const roleDoc of rolesSnapshot.docs) {
+      const role = roleDoc.data() as Role
+      if (role.role !== "voter") continue
+      if (role.revokedReason === "organisation_email" && role.status === "rejected") continue
+
+      const userSnap = await getDoc(doc(db, "users", role.userId))
+      const email = userSnap.exists() ? String(userSnap.data().email || "") : ""
+
+      if (!isOrganizationMemberEmail(email, domain)) {
+        await updateDoc(roleDoc.ref, {
+          status: "rejected",
+          revokedReason: "organisation_email",
+          statusBeforeRevoke: role.status === "approved" || role.status === "pending" ? role.status : "pending",
+          revokedAt: serverTimestamp(),
+        })
+        revoked += 1
+      }
+    }
+
+    return { revoked, error: null }
+  } catch (error: any) {
+    return { revoked: 0, error: error.message }
+  }
+}
+
+export const restoreOrganisationMembership = async (userId: string, email: string, domain: string) => {
+  try {
+    if (!isOrganizationMemberEmail(email, domain)) {
+      return { restored: 0, error: "That email is not an organisation email for this election." }
+    }
+
+    const parsed = parseOrganizationEmail(email)
+    await updateDoc(doc(db, "users", userId), {
+      email,
+      program: parsed?.program || "",
+      intakeYear: parsed?.year || "",
+      orgLocalName: parsed?.name || "",
+      organizationDomain: parsed?.domain || domain,
+    })
+
+    const rolesSnapshot = await getDocs(query(collection(db, "roles"), where("userId", "==", userId)))
+    let restored = 0
+
+    for (const roleDoc of rolesSnapshot.docs) {
+      const role = roleDoc.data() as Role
+      if (role.revokedReason !== "organisation_email") continue
+
+      const electionSnap = await getDoc(doc(db, "elections", role.electionId))
+      const electionDomain = electionSnap.exists()
+        ? String(electionSnap.data().organizationDomain || domain)
+        : domain
+      if (!isOrganizationMemberEmail(email, electionDomain)) continue
+
+      await updateDoc(roleDoc.ref, {
+        status: role.statusBeforeRevoke || "pending",
+        revokedReason: null,
+        restoredAt: serverTimestamp(),
+      })
+      restored += 1
+    }
+
+    return { restored, error: null }
+  } catch (error: any) {
+    return { restored: 0, error: error.message }
+  }
+}
+
 export const approveVoter = async (voterId: string, electionToken: string) => {
   try {
+    const electionSnap = await getDoc(doc(db, "elections", electionToken))
+    if (electionSnap.exists() && electionSnap.data().orgMembersOnly) {
+      const userSnap = await getDoc(doc(db, "users", voterId))
+      const email = userSnap.exists() ? String(userSnap.data().email || "") : ""
+      const domain = String(electionSnap.data().organizationDomain || "mubas.ac.mw")
+      if (!isOrganizationMemberEmail(email, domain)) {
+        return {
+          error: `This voter must use an organisation email like bece22-yourname@${domain} before they can be approved.`,
+        }
+      }
+    }
+
     console.log('db voterID', voterId);
     const rolesQuery = query(collection(db, "roles"), where("userId", "==", voterId), where("electionId", "==", electionToken));
     const rolesSnapshot = await getDocs(rolesQuery)
@@ -554,7 +683,13 @@ export const disapproveVoter = async (voterId: string, electionToken:string) => 
 export const getElectionByToken = async (electionToken: string) => {
   try {
     //remove percentage % if the token contains it, it may confuse the system since a space is also a %
-    const electionQuery = query(collection(db, "elections"), where("electionToken", "==", electionToken))
+    let token = electionToken
+    try {
+      token = decodeURIComponent(electionToken)
+    } catch {
+      token = electionToken
+    }
+    const electionQuery = query(collection(db, "elections"), where("electionToken", "==", token.trim()))
 
     const electionSnapshot = await getDocs(electionQuery)
     console.log(electionSnapshot.empty);
@@ -620,7 +755,7 @@ export const approveElectionRequest = async (electionId: string, superAdminId: s
 
     return { success: true }
   } catch (error: any) {
-    return { success: false, error: error.message }
+    return { success: false, error: toFriendlyMessage(error, "We could not approve this election. Please try again.") }
   }
 }
 
@@ -668,21 +803,24 @@ export const disapproveElectionResults = async (electionId: string, adminId: str
 // Get Pending Election Requests (Super Admin function)
 export const getPendingElectionRequests = async () => {
   try {
-    const electionQuery = query(
-      collection(db, "elections"),
-      where("status", "==", "pending"),
-      orderBy("createdAt", "desc"),
-    )
-
+    const electionQuery = query(collection(db, "elections"), orderBy("createdAt", "desc"))
     const electionSnapshot = await getDocs(electionQuery)
-    const elections = electionSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Election[]
+    const elections = electionSnapshot.docs
+      .map((electionDoc) => {
+        const data = electionDoc.data()
+        return {
+          id: electionDoc.id,
+          ...data,
+          startDate: data?.startDate?.toDate?.() || data?.startDate,
+          endDate: data?.endDate?.toDate?.() || data?.endDate,
+          createdAt: data?.createdAt?.toDate?.() || data?.createdAt,
+        } as Election
+      })
+      .filter((election) => !election.approval || election.approval === "pending")
 
     return { elections, error: null }
   } catch (error: any) {
-    return { elections: [], error: error.message }
+    return { elections: [], error: toFriendlyMessage(error, "We could not load election requests.") }
   }
 }
 
@@ -691,7 +829,7 @@ export const rejectElectionRequest = async (electionId: string, superAdminId: st
   try {
     // Update election status
     await updateDoc(doc(db, "elections", electionId), {
-      status: "rejected",
+      approval: "rejected",
       rejectedBy: superAdminId,
       rejectedAt: serverTimestamp(),
       rejectionReason: reason,
@@ -730,7 +868,7 @@ export const rejectElectionRequest = async (electionId: string, superAdminId: st
 
     return { success: true }
   } catch (error: any) {
-    return { success: false, error: error.message }
+    return { success: false, error: toFriendlyMessage(error, "We could not reject this election. Please try again.") }
   }
 }
 
@@ -927,27 +1065,16 @@ export const addCandidate = async (
       updatedAt: serverTimestamp(),
     })
 
-    // Upload candidate photo if provided to supabase
-    // Upload to Supabase
     if (imageData) {
-      const filename = `candidate-${docRef.id}-${imageData.name}`
-      const { data, error } = await supabase.storage.from("see-evote").upload(filename, imageData)
-
-      console.log(data)
-      if (error) {
-        console.error(error)
-        console.log(error)
-        return { success: false, error: "Error Uploading Image", candidateId: docRef.id }
+      try {
+        const imageUrl = await uploadImageToCloudinary(imageData, "see-evote/candidates")
+        await updateDoc(doc(db, "candidates", docRef.id), {
+          image: imageUrl,
+          updatedAt: serverTimestamp(),
+        })
+      } catch (uploadError: any) {
+        return { success: false, error: uploadError.message || "Error Uploading Image", candidateId: docRef.id }
       }
-
-      // Get public URL
-      const { data: publicUrl } = supabase.storage.from("see-evote").getPublicUrl(data.path)
-
-      // Save in Firebase
-      await updateDoc(doc(db, "candidates", docRef.id), {
-        image: publicUrl.publicUrl,
-        updatedAt: serverTimestamp(),
-      })
       return { success: true, error: null, candidateId: docRef.id }
     }
 
@@ -960,24 +1087,17 @@ export const addCandidate = async (
 
 export const updateCandidate = async (candidateId: string, updateData: Partial<Candidate>, imageData: File) => {
   try {
-    // Upload to Supabase
     if (imageData) {
-      const filename = `candidate-${candidateId}-${imageData.name}`
-      const { data, error } = await supabase.storage.from("see-evote").upload(filename, imageData)
-
-      if (error) {
-        console.error(error)
-        return { success: false, error: "Error Uploading Image", candidateId }
+      try {
+        const imageUrl = await uploadImageToCloudinary(imageData, "see-evote/candidates")
+        await updateDoc(doc(db, "candidates", candidateId), {
+          ...updateData,
+          image: imageUrl,
+          updatedAt: serverTimestamp(),
+        })
+      } catch (uploadError: any) {
+        return { success: false, error: uploadError.message || "Error Uploading Image", candidateId }
       }
-
-      // Get public URL
-      const { data: publicUrl } = supabase.storage.from("see-evote").getPublicUrl(data.path)
-      console.log('updateData',updateData)
-      await updateDoc(doc(db, "candidates", candidateId), {
-        ...updateData,
-        image: publicUrl.publicUrl,
-        updatedAt: serverTimestamp(),
-      })
       return { error: null, success: true, candidateId }
     }
 
@@ -1186,10 +1306,10 @@ export const deleteAllLogs = async(electionId: string) => {
 export const updateUserProfile = async (userId: string, profileData: Partial<User>) => {
   try {
     const userRef = doc(db, "users", userId)
-    await updateDoc(userRef, {
+    await updateDoc(userRef, omitUndefined({
       ...profileData,
       updatedAt: serverTimestamp(),
-    })
+    } as Record<string, unknown>))
 
     // Log the action
     await logAction(userId, "UPDATE_PROFILE", undefined, profileData.organizationId, {

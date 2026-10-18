@@ -53,12 +53,15 @@ export default function VotePage({ params }: VotePageProps) {
         const { election: fetchedElection } = await getElectionByToken(params.electionToken)
         const { roles } = await getUserRoles(user.id)
         console.log("roles", roles)
-        const relevantRole = roles.find(
-          (role) => role.electionToken === params.electionToken && role.status === "approved",
-        )
+        const relevantRole = roles.find((role) => role.electionToken === params.electionToken)
 
         if (!fetchedElection || !relevantRole) {
           router.push("/dashboard")
+          return
+        }
+
+        if (relevantRole.status !== "approved") {
+          router.push(`/dashboard/${params.electionToken}`)
           return
         }
 

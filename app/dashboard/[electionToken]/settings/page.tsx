@@ -21,6 +21,7 @@ import {
   getGeneratedVoterIDs,
   approveElectionResults,
   disapproveElectionResults,
+  revokeNonOrganisationMembers,
 } from "@/lib/database"
 import type { Election, Role, VoterID } from "@/lib/types"
 import {
@@ -39,6 +40,10 @@ import {
   Key,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { uploadImageToCloudinary } from "@/lib/cloudinary"
+import { toFriendlyMessage } from "@/lib/user-messages"
+import { DEFAULT_ORG_DOMAIN, ORG_EMAIL_EXAMPLE } from "@/lib/org-email"
+import { ShareElectionDialog } from "@/components/elections/share-election-dialog"
 
 export default function ElectionSettingsPage() {
   const params = useParams()
@@ -62,7 +67,11 @@ export default function ElectionSettingsPage() {
     startDate: "",
     endDate: "",
     resultsVisible: false,
+    backgroundImage: "",
+    orgMembersOnly: false,
+    organizationDomain: DEFAULT_ORG_DOMAIN,
   })
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,6 +92,9 @@ export default function ElectionSettingsPage() {
             startDate: new Date(electionResult.election.startDate).toISOString().slice(0, 16),
             endDate: new Date(electionResult.election.endDate).toISOString().slice(0, 16),
             resultsVisible: electionResult.election.resultsVisible || false,
+            backgroundImage: electionResult.election.backgroundImage || "",
+            orgMembersOnly: !!electionResult.election.orgMembersOnly,
+            organizationDomain: electionResult.election.organizationDomain || DEFAULT_ORG_DOMAIN,
           })
 
           // Fetch voter IDs
@@ -126,6 +138,9 @@ export default function ElectionSettingsPage() {
         description: formData.description,
         startDate: new Date(formData.startDate),
         endDate: new Date(formData.endDate),
+        backgroundImage: formData.backgroundImage,
+        orgMembersOnly: formData.orgMembersOnly,
+        organizationDomain: formData.organizationDomain.trim().toLowerCase(),
       })
 
       if (result.error) {
@@ -135,10 +150,29 @@ export default function ElectionSettingsPage() {
           variant: "destructive",
         })
       } else {
-        toast({
-          title: "Settings Saved",
-          description: "Election settings have been updated successfully.",
-        })
+        if (formData.orgMembersOnly) {
+          const revocation = await revokeNonOrganisationMembers(
+            election.id,
+            formData.organizationDomain.trim().toLowerCase(),
+          )
+          if (revocation.error) {
+            toast({
+              title: "Settings saved, revocation failed",
+              description: revocation.error,
+              variant: "destructive",
+            })
+          } else {
+            toast({
+              title: "Settings Saved",
+              description: `Organisation emails are required. ${revocation.revoked} member${revocation.revoked === 1 ? "" : "s"} with a different email ${revocation.revoked === 1 ? "was" : "were"} revoked.`,
+            })
+          }
+        } else {
+          toast({
+            title: "Settings Saved",
+            description: "Election settings have been updated successfully.",
+          })
+        }
         // Refresh election data
         const updatedElection = await getElectionByToken(electionToken)
         if (updatedElection.election) {
@@ -319,11 +353,9 @@ export default function ElectionSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Election Token</Label>
-                      <div className="flex items-center gap-2">
-                        <Input value={election.electionToken} disabled className="font-mono" />
-                        <Badge variant="secondary">Read-only</Badge>
-                      </div>
+                      <Label>Election code</Label>
+                      <Input value={election.electionToken} disabled className="font-mono" />
+                      <ShareElectionDialog election={election} />
                     </div>
                   </div>
 
@@ -357,6 +389,73 @@ export default function ElectionSettingsPage() {
                         onChange={(e) => setFormData((prev) => ({ ...prev, endDate: e.target.value }))}
                       />
                     </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <Label>Election background picture</Label>
+                    {formData.backgroundImage ? (
+                      <div
+                        className="aspect-video w-full rounded-xl bg-cover bg-center bg-no-repeat border"
+                        style={{ backgroundImage: `url(${formData.backgroundImage})` }}
+                      />
+                    ) : (
+                      <div className="aspect-video w-full rounded-xl border border-dashed flex items-center justify-center text-sm text-gray-500">
+                        No background yet. Use a wide landscape photo.
+                      </div>
+                    )}
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingImage}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setUploadingImage(true)
+                        try {
+                          const url = await uploadImageToCloudinary(file, "see-evote/elections")
+                          setFormData((prev) => ({ ...prev, backgroundImage: url }))
+                          toast({ title: "Picture uploaded", description: "Save changes to keep this background." })
+                        } catch (error: any) {
+                          toast({
+                            title: "Upload failed",
+                            description: toFriendlyMessage(error, "We could not upload that picture. Try a smaller image."),
+                            variant: "destructive",
+                          })
+                        } finally {
+                          setUploadingImage(false)
+                        }
+                      }}
+                    />
+                    <p className="text-xs text-gray-500">
+                      {uploadingImage ? "Uploading your picture..." : "A wide photo looks best on the election card."}
+                    </p>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-4 rounded-xl border p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <Label>Organisation members only</Label>
+                        
+                      </div>
+                      <Switch
+                        checked={formData.orgMembersOnly}
+                        onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, orgMembersOnly: checked }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="organizationDomain">Organisation email domain</Label>
+                      <Input
+                        id="organizationDomain"
+                        value={formData.organizationDomain}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, organizationDomain: e.target.value }))}
+                        placeholder={DEFAULT_ORG_DOMAIN}
+                      />
+                    </div>
+                  
                   </div>
 
                   <Separator />

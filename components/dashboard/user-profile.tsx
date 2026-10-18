@@ -17,8 +17,8 @@ export function UserProfile() {
         </div>
         <div>
           <h3 className="font-semibold text-gray-800">{user.name}</h3>
-          <p className="text-sm text-gray-600 capitalize">{user.role}</p>
           <p className="text-sm text-gray-500">{user.email}</p>
+          {user.voterId && <p className="text-sm font-mono text-ivote-primary">Voter ID {user.voterId}</p>}
         </div>
       </div>
     </Card>

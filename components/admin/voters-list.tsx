@@ -7,6 +7,7 @@ import { Role, type User } from "@/lib/types"
 import { UserIcon, Mail, Phone, MapPin, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { approveVoter, disapproveVoter, getVoterRole } from "@/lib/database"
+import { useToast } from "@/hooks/use-toast"
 
 interface VotersListProps {
   voters: User[]
@@ -16,6 +17,7 @@ interface VotersListProps {
 }
 
 export function VotersList({ voters, loading, onVotersUpdate, electionToken }: VotersListProps) {
+  const { toast } = useToast()
   const [showManage, setShowManage] = useState(false);
   const [selectedVoter, setSelectedVoter] = useState<User | null>(null);
   const [voterRole, setVoterRole] = useState<Role | null>(null);
@@ -24,7 +26,15 @@ export function VotersList({ voters, loading, onVotersUpdate, electionToken }: V
   const handleApprove = async (voterId: string) => {
     try {
       if (!voterId || !electionToken) return;
-      await approveVoter(voterId, electionToken)
+      const result = await approveVoter(voterId, electionToken)
+      if (result.error) {
+        toast({
+          title: "Cannot approve",
+          description: result.error,
+          variant: "destructive",
+        })
+        return
+      }
       await fetchVoterRoles();
       setShowManage(false)
       console.log("approved how many times");
@@ -167,7 +177,9 @@ export function VotersList({ voters, loading, onVotersUpdate, electionToken }: V
               </div>
               <div className="flex items-center gap-2">
                 {
-                  role?.status === 'approved' ?
+                    role?.revokedReason === "organisation_email" ?
+                      <Badge className="bg-red-100 text-red-800">Revoked — wrong email</Badge> :
+                    role?.status === 'approved' ?
                     <Badge className="bg-green-100 text-green-800">Active</Badge> :
                     role?.status === 'rejected' ?
                       <Badge className="bg-yellow-100 text-yellow-800">Rejected</Badge> :

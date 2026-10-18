@@ -45,7 +45,7 @@
     "cmdk": "latest",
     "date-fns": "4.1.0",
     "embla-carousel-react": "latest",
-    "firebase": "latest",
+    "firebase": "^13.0.0",
     "geist": "latest",
     "input-otp": "latest",
     "jspdf": "latest",

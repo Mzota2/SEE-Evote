@@ -4,52 +4,60 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type User as FirebaseUser,
-  signInAnonymously,
+  GoogleAuthProvider,
+  signInWithPopup,
+  sendPasswordResetEmail,
+  verifyBeforeUpdateEmail,
+  reload,
 } from "firebase/auth"
-import {
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-  addDoc,
-  serverTimestamp,
-} from "firebase/firestore"
+import { doc, setDoc, getDoc } from "firebase/firestore"
+import { nanoid } from "nanoid"
 import { auth, db } from "./firebase"
-import type { User, VoterID } from "./types"
+import { parseOrganizationEmail } from "./org-email"
+import { omitUndefined } from "./utils"
+import { toFriendlyMessage } from "./user-messages"
+import type { User } from "./types"
 
-export const signUp = async (email: string, password: string, userData: Partial<User>) => {
+const buildUserRecord = (id: string, email: string, name: string, provider: "password" | "google"): User => {
+  const parsed = parseOrganizationEmail(email)
+
+  return omitUndefined({
+    id,
+    email,
+    name,
+    voterId: `SEE-${nanoid(8).toUpperCase()}`,
+    createdAt: new Date(),
+    isActive: true,
+    agreeToTerms: true,
+    authProvider: provider,
+    program: parsed?.program,
+    intakeYear: parsed?.year,
+    orgLocalName: parsed?.name,
+    organizationDomain: parsed?.domain,
+  })
+}
+
+export const signUp = async (email: string, password: string, name: string) => {
   try {
     if (!auth || !db) {
-      throw new Error("Firebase services not initialized. Please check your configuration.")
+      return { user: null, error: "We could not start registration. Refresh the page and try again." }
     }
 
     const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-    const user = userCredential.user
+    const newUser = buildUserRecord(userCredential.user.uid, email, name.trim(), "password")
 
-    const newUser: User = {
-      id: user.uid,
-      email: user.email!,
-      name: userData.name || "",
-      createdAt: new Date(),
-      ...userData,
-    }
-
-    await setDoc(doc(db, "users", user.uid), newUser)
+    await setDoc(doc(db, "users", userCredential.user.uid), omitUndefined(newUser as unknown as Record<string, unknown>))
     return { user: newUser, error: null }
   } catch (error: any) {
     console.error("Sign up error:", error)
-    return { user: null, error: error.message || "Failed to create account" }
+    return { user: null, error: toFriendlyMessage(error, "We could not create your account. Please try again.") }
   }
 }
 
 export const signIn = async (email: string, password: string) => {
   try {
     if (!auth || !db) {
-      throw new Error("Firebase services not initialized. Please check your configuration.")
+      return { user: null, error: "We could not sign you in. Refresh the page and try again." }
     }
 
     const userCredential = await signInWithEmailAndPassword(auth, email, password)
@@ -57,102 +65,100 @@ export const signIn = async (email: string, password: string) => {
 
     if (userDoc.exists()) {
       return { user: userDoc.data() as User, error: null }
-    } else {
-      throw new Error("User data not found")
     }
+
+    throw new Error("We could not find your account details. Try signing up again.")
   } catch (error: any) {
     console.error("Sign in error:", error)
-    return { user: null, error: error.message || "Failed to sign in" }
+    return { user: null, error: toFriendlyMessage(error, "We could not sign you in. Please try again.") }
   }
 }
 
-export const voteTokenSignIn = async (votingID: string, electionToken: string) => {
+export const signInWithGoogle = async (intent: "login" | "signup") => {
   try {
     if (!auth || !db) {
-      throw new Error("Firebase services not initialized. Please check your configuration.")
+      return { user: null, error: "We could not sign you in. Refresh the page and try again." }
     }
 
-    // First, verify the voting ID exists and matches the election token
-    const voterIDQuery = query(
-      collection(db, "voterIDs"),
-      where("token", "==", votingID),
-      where("electionToken", "==", electionToken),
-      where("isUsed", "==", false),
+    const provider = new GoogleAuthProvider()
+    provider.setCustomParameters({ prompt: "select_account" })
+    const credential = await signInWithPopup(auth, provider)
+    const firebaseUser = credential.user
+    const email = firebaseUser.email
+
+    if (!email) {
+      await firebaseSignOut(auth)
+      return { user: null, error: "Google did not share an email address. Try another account." }
+    }
+
+    const userRef = doc(db, "users", firebaseUser.uid)
+    const existing = await getDoc(userRef)
+
+    if (intent === "login" && !existing.exists()) {
+      await firebaseSignOut(auth)
+      return { user: null, error: "No account was found for this Google email. Create an account first." }
+    }
+
+    if (existing.exists()) {
+      return { user: existing.data() as User, error: null }
+    }
+
+    const newUser = buildUserRecord(
+      firebaseUser.uid,
+      email,
+      firebaseUser.displayName || email.split("@")[0],
+      "google",
     )
-
-    const voterIDSnapshot = await getDocs(voterIDQuery)
-
-    if (voterIDSnapshot.empty) {
-      return { success: false, error: "Invalid Voting ID or Election Token, or this ID has already been used" }
-    }
-
-    const voterIDDoc = voterIDSnapshot.docs[0]
-    const voterIDData = voterIDDoc.data() as VoterID
-
-    // Check if the voting ID has expired
-    const now = new Date()
-    const expiresAt = new Date(voterIDData.expiresAt)
-    if (now > expiresAt) {
-      return { success: false, error: "This Voting ID has expired" }
-    }
-
-    // Sign in anonymously
-    const userCredential = await signInAnonymously(auth)
-    const firebaseUser = userCredential.user
-
-    if (!firebaseUser) {
-      return { success: false, error: "Failed to create anonymous session" }
-    }
-
-    // Create a temporary user record for the anonymous voter
-    const anonymousUser: User = {
-      id: firebaseUser.uid,
-      email: `anonymous-${votingID}@voter.temp`,
-      name: `Voter ${votingID}`,
-      birthday: new Date(),
-      contactNumber: "",
-      address: {
-        province: "",
-        barangay: "",
-        city: "",
-      },
-      organizationId: voterIDData.organizationId,
-      createdAt: new Date(),
-      isActive: true,
-    }
-
-    // Save the anonymous user
-    await setDoc(doc(db, "users", firebaseUser.uid), anonymousUser)
-
-    // Create a voter role for this anonymous user
-    await addDoc(collection(db, "roles"), {
-      userId: firebaseUser.uid,
-      electionId: voterIDData.electionId,
-      electionToken: voterIDData.electionToken,
-      organizationId: voterIDData.organizationId,
-      role: "voter",
-      status: "approved",
-      createdAt: serverTimestamp(),
-    })
-
-    // Mark the voting ID as used
-    await updateDoc(doc(db, "voterIDs", voterIDDoc.id), {
-      isUsed: true,
-      votedAt: serverTimestamp(),
-      usedBy: firebaseUser.uid,
-    })
-
-    return {
-      success: true,
-      user: anonymousUser,
-      error: null,
-      electionToken: voterIDData.electionToken,
-      electionId: voterIDData.electionId,
-    }
+    await setDoc(userRef, omitUndefined(newUser as unknown as Record<string, unknown>))
+    return { user: newUser, error: null }
   } catch (error: any) {
-    console.error("Anonymous sign in error:", error)
-    return { success: false, error: error.message || "Failed to sign in anonymously" }
+    console.error("Google sign in error:", error)
+    return { user: null, error: toFriendlyMessage(error, "Google sign-in did not finish. Please try again.") }
   }
+}
+
+export const resetPassword = async (email: string) => {
+  try {
+    if (!auth) {
+      return { error: "We could not send the reset email. Please try again." }
+    }
+
+    await sendPasswordResetEmail(auth, email.trim())
+    return { error: null }
+  } catch (error: any) {
+    return { error: toFriendlyMessage(error, "We could not send the reset email. Please try again.") }
+  }
+}
+
+export const requestOrganisationEmailChange = async (newEmail: string) => {
+  try {
+    const current = auth.currentUser
+    if (!current) {
+      return { error: "Sign in again before changing your email." }
+    }
+
+    const usesPassword = current.providerData.some((provider) => provider.providerId === "password")
+    if (!usesPassword) {
+      return {
+        error: "This account uses Google, so its email cannot be changed here. Sign out and register a new account with your organisation email.",
+      }
+    }
+
+    await verifyBeforeUpdateEmail(current, newEmail.trim().toLowerCase())
+    return { error: null }
+  } catch (error: any) {
+    return { error: toFriendlyMessage(error, "We could not send the verification email.") }
+  }
+}
+
+export const readVerifiedEmail = async () => {
+  const current = auth.currentUser
+  if (!current) {
+    return { email: "", error: "Sign in again to confirm your new email." }
+  }
+
+  await reload(current)
+  return { email: current.email || "", error: null }
 }
 
 export const signOut = async () => {
@@ -160,7 +166,7 @@ export const signOut = async () => {
     await firebaseSignOut(auth)
     return { error: null }
   } catch (error: any) {
-    return { error: error.message }
+    return { error: toFriendlyMessage(error, "We could not sign you out. Please try again.") }
   }
 }
 

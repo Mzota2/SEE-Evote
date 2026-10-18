@@ -3,405 +3,218 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { signUp } from "@/lib/auth"
+import { PasswordInput } from "@/components/auth/password-input"
+import { GoogleAuthButton } from "@/components/auth/google-auth-button"
+import { OrgEmailHint } from "@/components/auth/org-email-hint"
+import { signUp, signInWithGoogle } from "@/lib/auth"
+import { safeNextPath } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 
 export default function RegisterPage() {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    middleName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    contactNumber: "",
-    birthday: "",
-    region: "",
-    street: "",
-    city: "",
-    school:"",
-    department:"",
-    program:"",
-    studentId:"",
-    agreeToTerms: false,
-  })
+  const [fullName, setFullName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [agreeToTerms, setAgreeToTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextPath = safeNextPath(searchParams.get("next"))
   const { toast } = useToast()
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+  const goNext = (voterId?: string) => {
+    toast({
+      title: "Registration successful",
+      description: voterId ? `Your voter ID is ${voterId}` : "Welcome to SEE-Evote.",
+    })
+    router.push(nextPath || "/post-registration")
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       toast({
-        title: "Password Mismatch",
-        description: "Passwords do not match",
+        title: "Passwords do not match",
+        description: "Type the same password in both boxes.",
         variant: "destructive",
       })
       return
     }
 
-    if (!formData.agreeToTerms) {
+    if (!agreeToTerms) {
       toast({
-        title: "Terms Required",
-        description: "Please agree to the terms and conditions",
+        title: "Agree to the terms first",
+        description: "Tick the box to accept the terms before creating your account.",
         variant: "destructive",
       })
       return
     }
 
     setLoading(true)
-
-    const userData = {
-      name: `${formData.firstName} ${formData.middleName} ${formData.lastName}`.trim(),
-      contactNumber: formData.contactNumber,
-      address: {
-        region: formData.region,
-        street: formData.street,
-        city: formData.city,
-      },
-      studentId:formData.studentId,
-      school:formData.school,
-      department:formData.department,
-      program:formData.program,
-    }
-    const { user, error } = await signUp(formData.email, formData.password, userData)
-    console.log("register",error);
+    const { user, error } = await signUp(email, password, fullName)
     if (error) {
       toast({
-        title: "Registration Failed",
+        title: "Could not create your account",
         description: error,
         variant: "destructive",
       })
     } else if (user) {
+      goNext(user.voterId)
+    }
+    setLoading(false)
+  }
+
+  const handleGoogle = async () => {
+    if (!agreeToTerms) {
       toast({
-        title: "Registration Successful",
-        description: "Welcome to SEE-Evote!",
+        title: "Agree to the terms first",
+        description: "Tick the box to accept the terms before continuing with Google.",
+        variant: "destructive",
       })
-      router.push("/post-registration")
+      return
     }
 
+    setLoading(true)
+    const { user, error } = await signInWithGoogle("signup")
+    if (error) {
+      toast({
+        title: "Could not sign up with Google",
+        description: error,
+        variant: "destructive",
+      })
+    } else if (user) {
+      goNext(user.voterId)
+    }
     setLoading(false)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-8 sm:py-12 px-4 sm:px-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4 sm:mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-amber-50 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-lg">
+        <div className="text-center mb-6">
+          <Link href="/" className="inline-flex items-center gap-2">
             <Image
-              width={100}
-              height={100}
+              width={140}
+              height={140}
               src="/see-evote-logo-transparent.png"
               alt="SEE-Evote Logo"
-              className="h-10 sm:h-12 w-auto"
+              className="h-16 w-auto"
             />
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Registration</h1>
         </div>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-          {/* Welcome Card */}
-          <Card className="p-6 sm:p-8 bg-see-evote-gradient text-white flex flex-col justify-center order-2 lg:order-1">
-            <div className="space-y-4 sm:space-y-6">
-              <div className="space-y-3 sm:space-y-4">
-                <h2 className="text-xl sm:text-2xl font-bold">Welcome!</h2>
-                <p className="text-white/90 text-sm sm:text-base">
-                  Welcome to SEE-Evote's Online Voting System, please register as a voter to vote in your preferred
-                  candidate
-                </p>
-              </div>
-
-              <div className="space-y-3 sm:space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2 text-sm sm:text-base">Voters ID No. <span className="text-red-300 text-sm">*</span></h3>
-                  <Input
-                    required
-                    id="studentId"
-                    name="studentId"
-                    placeholder="BECE/22/SS/004"
-                    value={formData.studentId}
-                    onChange={handleInputChange}
-                    className="bg-white/10 border-white/20 text-white placeholder:text-white/60 text-sm sm:text-base py-2 sm:py-3"
-                  />
-                </div>
-
-                <div>
-                  <h3 className="font-semibold mb-2 text-sm sm:text-base">Create password <span className="text-red-300 text-sm">*</span></h3>
-                  <p className="text-xs sm:text-sm text-white/80 mb-2">
-                    Create a strong password with a mix of letters, numbers and symbols.
-                  </p>
-                  <div className="space-y-2">
-                    <Input
-                      type="password"
-                      id="password"
-                      name="password"
-                      placeholder="Password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/60 text-sm sm:text-base py-2 sm:py-3"
-                    />
-                    <Input
-                      type="password"
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      placeholder="Confirm Password"
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/60 text-sm sm:text-base py-2 sm:py-3"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-2">
-                  <Checkbox
-                    checked={formData.agreeToTerms}
-                    onCheckedChange={() => {
-                      setFormData((prev) => {
-                        return {
-                          ...prev,
-                          agreeToTerms: !prev.agreeToTerms,
-                        }
-                      })
-                    }}
-                    id="terms"
-                    className="border-white/20 mt-1"
-                  />
-                  <Label htmlFor="terms" className="text-xs sm:text-sm text-white/90 leading-relaxed">
-                    I agree to SEE-Evote's Terms and Service and Privacy Policy
-                  </Label>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-white text-see-evote-primary hover:bg-white/90 text-sm sm:text-base py-2 sm:py-3"
-                >
-                  {loading ? "Creating Account..." : "REGISTER"}
-                </Button>
-
-                <p className="text-center text-white/80 text-sm sm:text-base">
-                  Already have an account?{" "}
-                  <Link href="/login" className="text-white underline">
-                    Sign In
-                  </Link>
-                </p>
-              </div>
+        <Card className="p-6 sm:p-8 bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+          <div className="space-y-5">
+            <div className="text-center space-y-2">
+              <h1 className="text-2xl font-bold text-gray-800">Create your voter account</h1>
+              <p className="text-sm text-gray-600">
+                Your voter ID is created automatically. You only need your name and email.
+              </p>
             </div>
-          </Card>
 
-          {/* Registration Form */}
-          <Card className="p-6 sm:p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl order-1 lg:order-2">
-            <div className="space-y-4 sm:space-y-6">
-              <div>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">
-                  Fill out your information
-                </h3>
-                <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
-                  Please fill out your information below.
-                </p>
-              </div>
+            <GoogleAuthButton
+              label={loading ? "Please wait..." : "Sign up with Google"}
+              onClick={handleGoogle}
+              disabled={loading}
+              className="w-full"
+            />
+            <OrgEmailHint />
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-xs sm:text-sm font-medium">
-                    FIRST NAME <span className="text-red-300 text-sm">*</span>
-                  </Label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    placeholder="First Name"
-                    required
-                    className="text-sm sm:text-base py-2 sm:py-3"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="middleName" className="text-xs sm:text-sm font-medium">
-                    MIDDLE NAME 
-                  </Label>
-                  <Input
-                    id="middleName"
-                    name="middleName"
-                    value={formData.middleName}
-                    onChange={handleInputChange}
-                    placeholder="Middle Name"
-                    className="text-sm sm:text-base py-2 sm:py-3"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-xs sm:text-sm font-medium">
-                    LAST NAME <span className="text-red-300 text-sm">*</span>
-                  </Label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    placeholder="Last Name"
-                    required
-                    className="text-sm sm:text-base py-2 sm:py-3"
-                  />
-                </div>
-              </div>
+            <div className="flex items-center gap-3 text-xs text-gray-400">
+              <div className="h-px flex-1 bg-gray-200" />
+              or register with email
+              <div className="h-px flex-1 bg-gray-200" />
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="birthday" className="text-xs sm:text-sm font-medium">
-                    BIRTHDAY
-                  </Label>
-                  <Input
-                    id="birthday"
-                    name="birthday"
-                    type="date"
-                    value={formData.birthday}
-                    onChange={handleInputChange}
-                    className="text-sm sm:text-base py-2 sm:py-3"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contactNumber" className="text-xs sm:text-sm font-medium">
-                    CONTACT NUMBER
-                  </Label>
-                  <Input
-                    id="contactNumber"
-                    name="contactNumber"
-                    value={formData.contactNumber}
-                    onChange={handleInputChange}
-                    placeholder="+265"
-                    className="text-sm sm:text-base py-2 sm:py-3"
-                  />
-                </div>
-              </div>
-
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs sm:text-sm font-medium">
-                  EMAIL <span className="text-red-300 text-sm">*</span>
-                </Label>
+                <Label htmlFor="fullName">Full name</Label>
                 <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Email"
+                  id="fullName"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Emmanuel Chirambo"
                   required
-                  className="text-sm sm:text-base py-2 sm:py-3"
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-
-                <div className="space-y-2">
-                  <Label htmlFor="school" className="text-xs sm:text-sm font-medium">
-                    SCHOOL <span className="text-red-300 text-sm">*</span>
-                  </Label>
-                  <Input
-                    id="school"
-                    name="school"
-                    value={formData.school}
-                    onChange={handleInputChange}
-                    placeholder="School of Engineering"
-                    className="text-sm sm:text-base py-2 sm:py-3"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="department" className="text-xs sm:text-sm font-medium">
-                    DEPARTMENT <span className="text-red-300 text-sm">*</span>
-                  </Label>
-                  <Input
-                    id="department"
-                    name="department"
-                    value={formData.department}
-                    onChange={handleInputChange}
-                    placeholder="Electrical Engineering"
-                    className="text-sm sm:text-base py-2 sm:py-3"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="program" className="text-xs sm:text-sm font-medium">
-                    PROGRAM <span className="text-red-300 text-sm">*</span>
-                  </Label>
-                  <Input
-                    id="program"
-                    name="program"
-                    value={formData.program}
-                    onChange={handleInputChange}
-                    placeholder="Electrical Engineering"
-                    className="text-sm sm:text-base py-2 sm:py-3"
-                    required
-                  />
-                </div>
-
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="bece22-yourname@mubas.ac.mw"
+                  required
+                />
               </div>
-              
 
-              <div className="space-y-3 sm:space-y-4">
-                <Label className="text-sm sm:text-base font-medium">CURRENT ADDRESS</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="region" className="text-xs sm:text-sm font-medium">
-                      REGION
-                    </Label>
-                    <Input
-                      id="region"
-                      name="region"
-                      value={formData.region}
-                      onChange={handleInputChange}
-                      placeholder="Region"
-                      className="text-sm sm:text-base py-2 sm:py-3"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="street" className="text-xs sm:text-sm font-medium">
-                      STREET
-                    </Label>
-                    <Input
-                      id="street"
-                      name="street"
-                      value={formData.street}
-                      onChange={handleInputChange}
-                      placeholder="Street"
-                      className="text-sm sm:text-base py-2 sm:py-3"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-xs sm:text-sm font-medium">
-                    CITY/MUNICIPALITY
-                  </Label>
-                  <Input
-                    id="city"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    placeholder="City/Municipality"
-                    className="text-sm sm:text-base py-2 sm:py-3"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <PasswordInput
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Create a password"
+                  required
+                  minLength={6}
+                />
               </div>
-            </div>
-          </Card>
-        </form>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm password</Label>
+                <PasswordInput
+                  id="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat your password"
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="terms"
+                  checked={agreeToTerms}
+                  onCheckedChange={(checked) => setAgreeToTerms(checked === true)}
+                  className="mt-1"
+                />
+                <Label htmlFor="terms" className="text-sm text-gray-600 leading-relaxed font-normal">
+                  I agree to SEE-Evote&apos;s{" "}
+                  <Link href="/terms" className="text-see-evote-primary underline">
+                    Terms and Conditions
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy" className="text-see-evote-primary underline">
+                    Privacy Policy
+                  </Link>
+                </Label>
+              </div>
+
+              <Button type="submit" disabled={loading} className="w-full bg-ivote-primary hover:bg-ivote-primary/90 text-white">
+                {loading ? "Creating account..." : "Register"}
+              </Button>
+            </form>
+
+            <p className="text-center text-sm text-gray-600">
+              Already have an account?{" "}
+              <Link href={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : "/login"} className="text-see-evote-primary hover:underline font-medium">
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </Card>
       </div>
     </div>
   )

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { AnimatedText } from "@/components/animated-text"
 import { VotingAnimation } from "@/components/voting-animation"
-import { Menu, X } from "lucide-react"
+import { PastElections } from "@/components/elections/past-elections"
+import { BarChart3, Menu, Shield, Vote, X } from "lucide-react"
 import { useState } from "react"
 
 export default function LandingPage() {
@@ -17,7 +18,7 @@ export default function LandingPage() {
       <header className="p-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/see-evote-logo-transparent.png" alt="SEE-Evote Logo" className="h-12 w-auto" />
+            <img src="/see-evote-logo-transparent.png" alt="SEE-Evote Logo" className="h-14 w-auto" />
           </div>
 
           {/* Desktop Navigation */}
@@ -150,30 +151,32 @@ export default function LandingPage() {
 
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
             <Card className="p-6 md:p-8 text-center space-y-4 hover:shadow-lg transition-shadow">
-              <div className="w-16 h-16 bg-ivote-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <div className="w-8 h-8 bg-ivote-primary rounded-full"></div>
+              <div className="w-16 h-16 bg-ivote-primary/10 rounded-2xl flex items-center justify-center mx-auto">
+                <Shield className="w-8 h-8 text-ivote-primary" />
               </div>
               <h3 className="text-lg md:text-xl font-semibold text-gray-800">Secured Platform</h3>
               <p className="text-gray-600">With our system, your data is secured</p>
             </Card>
 
             <Card className="p-6 md:p-8 text-center space-y-4 hover:shadow-lg transition-shadow">
-              <div className="w-16 h-16 bg-ivote-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <div className="w-8 h-8 bg-ivote-primary rounded-full"></div>
+              <div className="w-16 h-16 bg-ivote-secondary/15 rounded-2xl flex items-center justify-center mx-auto">
+                <Vote className="w-8 h-8 text-amber-500" />
               </div>
               <h3 className="text-lg md:text-xl font-semibold text-gray-800">Vote Online</h3>
               <p className="text-gray-600">In just few clicks, you can vote your preferred candidates</p>
             </Card>
 
             <Card className="p-6 md:p-8 text-center space-y-4 hover:shadow-lg transition-shadow sm:col-span-2 md:col-span-1">
-              <div className="w-16 h-16 bg-ivote-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <div className="w-8 h-8 bg-ivote-primary rounded-full"></div>
+              <div className="w-16 h-16 bg-ivote-primary/10 rounded-2xl flex items-center justify-center mx-auto">
+                <BarChart3 className="w-8 h-8 text-ivote-primary" />
               </div>
               <h3 className="text-lg md:text-xl font-semibold text-gray-800">Real Time Results</h3>
               <p className="text-gray-600">View real time voting results and scores of each candidates</p>
             </Card>
           </div>
         </div>
+
+        <PastElections />
 
         {/* Process Steps */}
         <div className="mt-16 md:mt-20">

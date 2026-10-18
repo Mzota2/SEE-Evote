@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 import { Bell, Shield, Palette, Save } from "lucide-react"
+import { DEFAULT_ORG_DOMAIN, ORG_EMAIL_EXAMPLE, parseOrganizationEmail } from "@/lib/org-email"
 
 interface UserSettings {
   notifications: {
@@ -150,6 +151,18 @@ export default function SettingsPage() {
           {isLoading ? "Saving..." : "Save Changes"}
         </Button>
       </div>
+
+      {user && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Organisation email key</CardTitle>
+            <CardDescription>
+              Emails for organisation elections follow {"{program}{year}-{name}@{domain}"}. Example {ORG_EMAIL_EXAMPLE}.
+            </CardDescription>
+          </CardHeader>
+         
+        </Card>
+      )}
 
       <Tabs defaultValue="notifications" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">

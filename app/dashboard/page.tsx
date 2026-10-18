@@ -5,17 +5,20 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { getUserRoles } from "@/lib/database"
+import { getElections, getUserRoles } from "@/lib/database"
 import { DashboardAnalytics } from "@/components/analytics/dashboard-analytics"
-import type { Role } from "@/lib/types"
+import type { Election, Role } from "@/lib/types"
 import { Vote, Settings, Clock, CheckCircle, XCircle, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import Logo from "@/components/Logo/Logo"
+import { OrgEmailRecovery } from "@/components/auth/org-email-recovery"
+import { DEFAULT_ORG_DOMAIN } from "@/lib/org-email"
 
 export default function DashboardPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [roles, setRoles] = useState<Role[]>([])
+  const [elections, setElections] = useState<Election[]>([])
   const [loadingRoles, setLoadingRoles] = useState(true)
   const [showAnalytics, setShowAnalytics] = useState(false)
 
@@ -28,14 +31,22 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchUserRoles = async () => {
       if (user) {
-        const { roles: fetchedRoles } = await getUserRoles(user.id)
+        const [{ roles: fetchedRoles }, electionsResult] = await Promise.all([getUserRoles(user.id), getElections()])
         setRoles(fetchedRoles)
+        setElections(electionsResult.elections)
         setLoadingRoles(false)
       }
     }
 
     fetchUserRoles()
   }, [user])
+
+  const refreshRoles = async () => {
+    if (!user) return
+    const [{ roles: fetchedRoles }, electionsResult] = await Promise.all([getUserRoles(user.id), getElections()])
+    setRoles(fetchedRoles)
+    setElections(electionsResult.elections)
+  }
 
   if (loading || !user) {
     return (
@@ -78,9 +89,80 @@ export default function DashboardPage() {
     return role === "admin" ? <Settings className="w-5 h-5" /> : <Vote className="w-5 h-5" />
   }
 
+  const electionByToken = new Map(elections.map((election) => [election.electionToken, election]))
+  const isPastRole = (role: Role) => {
+    const election = electionByToken.get(role.electionToken)
+    if (!election) return false
+    if (election.status === "closed") return true
+    return !!election.endDate && new Date(election.endDate).getTime() < Date.now()
+  }
+  const currentRoles = roles.filter((role) => !isPastRole(role))
+  const pastRoles = roles.filter((role) => isPastRole(role))
+
+  const renderRoleCard = (role: Role) => {
+    const election = electionByToken.get(role.electionToken)
+    return (
+      <Card key={role.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+        <div
+          className="aspect-video w-full bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: election?.backgroundImage
+              ? `linear-gradient(180deg, rgba(15,23,42,0.05), rgba(15,23,42,0.4)), url(${election.backgroundImage})`
+              : "linear-gradient(135deg, #4fc3e0, #f5c242)",
+          }}
+        />
+        <div className="p-6 space-y-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              {getRoleIcon(role.role)}
+              <span className="font-medium text-gray-800 capitalize">{role.role}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {getStatusIcon(role.status)}
+              <span className="text-sm text-gray-600">{getStatusText(role.status)}</span>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <h3 className="font-semibold text-gray-800">{election?.title || "Election"}</h3>
+            <p className="text-sm text-gray-600 font-mono bg-gray-50 p-2 rounded">{role.electionToken}</p>
+          </div>
+
+          {role.revokedReason === "organisation_email" ? (
+            <OrgEmailRecovery
+              domain={election?.organizationDomain || DEFAULT_ORG_DOMAIN}
+              onRestored={refreshRoles}
+            />
+          ) : role.status === "approved" ? (
+            <Link href={`/dashboard/${role.electionToken}`}>
+              <Button className="w-full bg-ivote-primary hover:bg-ivote-primary/90">Enter Dashboard</Button>
+            </Link>
+          ) : role.status === "pending" ? (
+            <div className="space-y-3">
+              <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                {role.role === "voter"
+                  ? "You have joined. You can vote after the organiser approves your voting rights."
+                  : "This election is still being reviewed."}
+              </p>
+              <Link href={`/dashboard/${role.electionToken}`}>
+                <Button variant="outline" className="w-full">
+                  {role.role === "voter" ? "See your request" : "Check status"}
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <Button disabled className="w-full">
+              {role.status === "rejected" ? "Rejected" : "Inactive"}
+            </Button>
+          )}
+        </div>
+      </Card>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-12 px-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <Logo />
@@ -124,52 +206,22 @@ export default function DashboardPage() {
 
             {showAnalytics && <DashboardAnalytics roles={roles} />}
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {roles.map((role) => (
-                <Card key={role.id} className="p-6 hover:shadow-lg transition-shadow">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        {getRoleIcon(role.role)}
-                        <span className="font-medium text-gray-800 capitalize">{role.role}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(role.status)}
-                        <span className="text-sm text-gray-600">{getStatusText(role.status)}</span>
-                      </div>
-                    </div>
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-800">Current elections</h3>
+              {currentRoles.length === 0 ? (
+                <Card className="p-6 text-sm text-gray-500">No current elections.</Card>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-8">{currentRoles.map(renderRoleCard)}</div>
+              )}
+            </div>
 
-                    <div className="space-y-2">
-                      <h3 className="font-semibold text-gray-800">Election Token</h3>
-                      <p className="text-sm text-gray-600 font-mono bg-gray-50 p-2 rounded">{role.electionToken}</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-gray-700">Organization</h4>
-                      <p className="text-sm text-gray-600">{role.organizationId}</p>
-                    </div>
-
-                    {role.status === "approved" ? (
-                      <Link href={`/dashboard/${role.electionToken}`}>
-                        <Button className="w-full bg-ivote-primary hover:bg-ivote-primary/90">Enter Dashboard</Button>
-                      </Link>
-                    ) : role.status === "pending" ? (
-                      <Button disabled className="w-full">
-                        Awaiting Approval
-                      </Button>
-                    ) : role.status === "rejected" ? (
-                      <Button disabled className="w-full bg-red-500">
-                        {" "}
-                        Rejected
-                      </Button>
-                    ) : (
-                      <Button disabled className="w-full">
-                        Inactive
-                      </Button>
-                    )}
-                  </div>
-                </Card>
-              ))}
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-800">Past elections</h3>
+              {pastRoles.length === 0 ? (
+                <Card className="p-6 text-sm text-gray-500">No past elections yet.</Card>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-8">{pastRoles.map(renderRoleCard)}</div>
+              )}
             </div>
 
             <Card className="p-6 bg-gradient-to-r from-ivote-primary/10 to-ivote-secondary/10">

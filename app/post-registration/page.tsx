@@ -14,6 +14,10 @@ import { joinElectionByToken, requestElectionWorkspace, checkOrganizationExists 
 import { useAuth } from "@/hooks/use-auth"
 import { ArrowRight, Vote, Settings } from "lucide-react"
 import Logo from "@/components/Logo/Logo"
+import { uploadImageToCloudinary } from "@/lib/cloudinary"
+import { DEFAULT_ORG_DOMAIN } from "@/lib/org-email"
+import { toFriendlyMessage } from "@/lib/user-messages"
+import { Switch } from "@/components/ui/switch"
 
 export default function PostRegistrationPage() {
   const [selectedOption, setSelectedOption] = useState<"join" | "create" | null>(null)
@@ -36,7 +40,10 @@ export default function PostRegistrationPage() {
     totalVoters: "",
     startDate: "",
     endDate: "",
+    orgMembersOnly: false,
+    organizationDomain: DEFAULT_ORG_DOMAIN,
   })
+  const [backgroundFile, setBackgroundFile] = useState<File | null>(null)
 
   const handleJoinElection = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,22 +54,21 @@ export default function PostRegistrationPage() {
       const result = await joinElectionByToken(user.id, joinForm.electionToken)
       if (result.success) {
         toast({
-          title: "Successfully Joined Election",
-          description: "You can now participate in the election.",
+          title: "You have joined",
+          description: "The organiser still needs to approve your voting rights before you can vote.",
         })
         router.push(`/dashboard/${joinForm.electionToken}`)
       } else {
         toast({
-          title: "Failed to Join Election",
-          description: result.error || "Invalid election token or election not found.",
+          title: "Could not join",
+          description: toFriendlyMessage(result.error, "Check the election code and try again."),
           variant: "destructive",
         })
       }
     } catch (error) {
-      console.log(error);
       toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Could not join",
+        description: toFriendlyMessage(error, "Please try again."),
         variant: "destructive",
       })
     }
@@ -75,32 +81,40 @@ export default function PostRegistrationPage() {
 
     setLoading(true)
     try {
+      let backgroundImage = ""
+      if (backgroundFile) {
+        backgroundImage = await uploadImageToCloudinary(backgroundFile, "see-evote/elections")
+      }
+
       const result = await requestElectionWorkspace(user.id, {
         title: createForm.title,
         description: createForm.description,
         organizationId: createForm.organizationId.toUpperCase(),
-        totalVoters:createForm.totalVoters,
+        totalVoters: createForm.totalVoters,
         startDate: new Date(createForm.startDate),
         endDate: new Date(createForm.endDate),
+        orgMembersOnly: createForm.orgMembersOnly,
+        organizationDomain: createForm.organizationDomain.trim().toLowerCase(),
+        backgroundImage,
       })
 
       if (result.success) {
         toast({
-          title: "Workspace Request Submitted",
-          description: "Your request has been submitted for admin approval. You will be notified via email.",
+          title: "Election submitted",
+          description: "A reviewer will approve it before voters can join.",
         })
         router.push("/dashboard")
       } else {
         toast({
-          title: "Failed to Submit Request",
-          description: result.error || "An error occurred while submitting your request.",
+          title: "Could not submit",
+          description: toFriendlyMessage(result.error, "Please check the details and try again."),
           variant: "destructive",
         })
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        title: "Could not submit",
+        description: toFriendlyMessage(error, "Please try again."),
         variant: "destructive",
       })
     }
@@ -144,6 +158,11 @@ export default function PostRegistrationPage() {
           <Logo/>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome to SEE-Evote!</h1>
           <p className="text-gray-600">Choose how you'd like to get started</p>
+          {user.voterId && (
+            <p className="mt-3 inline-flex rounded-full bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm">
+              Your voter ID is <span className="ml-2 font-mono text-ivote-primary">{user.voterId}</span>
+            </p>
+          )}
         </div>
 
         {!selectedOption && (
@@ -159,8 +178,7 @@ export default function PostRegistrationPage() {
                 </div>
                 <h3 className="text-xl font-semibold text-gray-800">Join an Election</h3>
                 <p className="text-gray-600">
-                  Have an election token? Join an existing election as a voter and participate in the democratic
-                  process.
+                  Have an election code? Join an existing election and cast your vote.
                 </p>
                 <div className="flex items-center justify-center text-ivote-primary font-medium">
                   <span>Get Started</span>
@@ -178,12 +196,12 @@ export default function PostRegistrationPage() {
                 <div className="w-16 h-16 bg-ivote-secondary/10 rounded-full flex items-center justify-center mx-auto">
                   <Settings className="w-8 h-8 text-ivote-secondary" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800">Create Election Workspace</h3>
+                <h3 className="text-xl font-semibold text-gray-800">Create an election</h3>
                 <p className="text-gray-600">
-                  Request to create and manage your own election workspace for your organization.
+                  Set up an election for your organisation. A reviewer will approve it before people can join.
                 </p>
                 <div className="flex items-center justify-center text-ivote-secondary font-medium">
-                  <span>Request Access</span>
+                  <span>Get started</span>
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </div>
               </div>
@@ -200,17 +218,17 @@ export default function PostRegistrationPage() {
                   <Vote className="w-8 h-8 text-ivote-primary" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">Join an Election</h2>
-                <p className="text-gray-600">Enter your election token to join as a voter</p>
+                <p className="text-gray-600">Enter the election code from your organiser</p>
               </div>
 
               <form onSubmit={handleJoinElection} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="electionToken">Election Token</Label>
+                  <Label htmlFor="electionToken">Election code</Label>
                   <Input
                     id="electionToken"
                     value={joinForm.electionToken}
                     onChange={(e) => setJoinForm((prev) => ({ ...prev, electionToken: e.target.value }))}
-                    placeholder="Enter your election token"
+                    placeholder="Paste the election code"
                     required
                   />
                 </div>
@@ -330,6 +348,40 @@ export default function PostRegistrationPage() {
                       required
                     />
                   </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="background">Election background picture</Label>
+                  <Input
+                    id="background"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setBackgroundFile(e.target.files?.[0] || null)}
+                  />
+                  <p className="text-xs text-gray-500">A wide photo looks best on the election card. You can skip this.</p>
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <Label>Organisation members only</Label>
+                    <p className="text-sm text-gray-600">Require an organisation email such as bece22-name@{createForm.organizationDomain}</p>
+                  </div>
+                  <Switch
+                    checked={createForm.orgMembersOnly}
+                    onCheckedChange={(checked) => setCreateForm((prev) => ({ ...prev, orgMembersOnly: checked }))}
+                  />
+                </div>
+
+                {createForm.orgMembersOnly && (
+                  <div className="space-y-2">
+                    <Label htmlFor="organizationDomain">Organisation email domain</Label>
+                    <Input
+                      id="organizationDomain"
+                      value={createForm.organizationDomain}
+                      onChange={(e) => setCreateForm((prev) => ({ ...prev, organizationDomain: e.target.value }))}
+                      placeholder="mubas.ac.mw"
+                    />
+                  </div>
+                )}
 
                 <div className="flex gap-4">
                   <Button type="button" variant="outline" onClick={() => setSelectedOption(null)} className="flex-1">

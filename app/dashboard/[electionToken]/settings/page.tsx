@@ -25,6 +25,7 @@ import {
 } from "@/lib/database"
 import type { Election, Role, VoterID } from "@/lib/types"
 import { displayElectionToken, electionTokensMatch } from "@/lib/utils"
+import { electionScheduleLabel, toDateTimeLocalValue } from "@/lib/election-schedule"
 import {
   Settings,
   Calendar,
@@ -43,7 +44,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { uploadImageToCloudinary } from "@/lib/cloudinary"
 import { toFriendlyMessage } from "@/lib/user-messages"
-import { DEFAULT_ORG_DOMAIN, ORG_EMAIL_EXAMPLE } from "@/lib/org-email"
+import { DEFAULT_ORG_DOMAIN, electionOrganizationDomains, parseOrganizationDomains } from "@/lib/org-email"
 import { ShareElectionDialog } from "@/components/elections/share-election-dialog"
 
 export default function ElectionSettingsPage() {
@@ -70,7 +71,7 @@ export default function ElectionSettingsPage() {
     resultsVisible: false,
     backgroundImage: "",
     orgMembersOnly: false,
-    organizationDomain: DEFAULT_ORG_DOMAIN,
+    organizationDomains: [DEFAULT_ORG_DOMAIN] as string[],
   })
   const [uploadingImage, setUploadingImage] = useState(false)
 
@@ -90,12 +91,12 @@ export default function ElectionSettingsPage() {
           setFormData({
             title: electionResult.election.title,
             description: electionResult.election.description,
-            startDate: new Date(electionResult.election.startDate).toISOString().slice(0, 16),
-            endDate: new Date(electionResult.election.endDate).toISOString().slice(0, 16),
+            startDate: toDateTimeLocalValue(electionResult.election.startDate || electionResult.election.startTime),
+            endDate: toDateTimeLocalValue(electionResult.election.endDate || electionResult.election.endTime),
             resultsVisible: electionResult.election.resultsVisible || false,
             backgroundImage: electionResult.election.backgroundImage || "",
             orgMembersOnly: !!electionResult.election.orgMembersOnly,
-            organizationDomain: electionResult.election.organizationDomain || DEFAULT_ORG_DOMAIN,
+            organizationDomains: electionOrganizationDomains(electionResult.election),
           })
 
           // Fetch voter IDs
@@ -132,16 +133,41 @@ export default function ElectionSettingsPage() {
   const handleSaveBasicSettings = async () => {
     if (!election) return
 
+    const startDate = new Date(formData.startDate)
+    const endDate = new Date(formData.endDate)
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate <= startDate) {
+      toast({
+        title: "Check the schedule",
+        description: "The end date and time must be later than the start date and time.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const enteredDomains = formData.organizationDomains.map((item) => item.trim()).filter(Boolean)
+    const organizationDomains = parseOrganizationDomains(enteredDomains)
+    if (enteredDomains.length !== organizationDomains.length || (formData.orgMembersOnly && organizationDomains.length === 0)) {
+      toast({
+        title: "Check the organisation domains",
+        description: "Enter full domains such as mubas.ac.mw. Add another row for each extra domain.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setSaving(true)
     try {
       const result = await updateElection(election.id, {
         title: formData.title,
         description: formData.description,
-        startDate: new Date(formData.startDate),
-        endDate: new Date(formData.endDate),
+        startDate,
+        endDate,
+        startTime: startDate,
+        endTime: endDate,
         backgroundImage: formData.backgroundImage,
         orgMembersOnly: formData.orgMembersOnly,
-        organizationDomain: formData.organizationDomain.trim().toLowerCase(),
+        organizationDomains,
+        organizationDomain: organizationDomains.join(", "),
       })
 
       if (result.error) {
@@ -152,10 +178,7 @@ export default function ElectionSettingsPage() {
         })
       } else {
         if (formData.orgMembersOnly) {
-          const revocation = await revokeNonOrganisationMembers(
-            election.id,
-            formData.organizationDomain.trim().toLowerCase(),
-          )
+          const revocation = await revokeNonOrganisationMembers(election.id, organizationDomains)
           if (revocation.error) {
             toast({
               title: "Settings saved, revocation failed",
@@ -448,15 +471,47 @@ export default function ElectionSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="organizationDomain">Organisation email domain</Label>
-                      <Input
-                        id="organizationDomain"
-                        value={formData.organizationDomain}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, organizationDomain: e.target.value }))}
-                        placeholder={DEFAULT_ORG_DOMAIN}
-                      />
+                      <Label>Organisation email domains</Label>
+                      <p className="text-sm text-gray-600">
+                        Voters can use an organisation email on any of these domains, such as bece22-yourname@mubas.ac.mw.
+                      </p>
+                      {formData.organizationDomains.map((domain, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            value={domain}
+                            placeholder={DEFAULT_ORG_DOMAIN}
+                            onChange={(event) => {
+                              const organizationDomains = [...formData.organizationDomains]
+                              organizationDomains[index] = event.target.value
+                              setFormData((prev) => ({ ...prev, organizationDomains }))
+                            }}
+                          />
+                          {formData.organizationDomains.length > 1 ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  organizationDomains: prev.organizationDomains.filter((_, item) => item !== index),
+                                }))
+                              }
+                            >
+                              Remove
+                            </Button>
+                          ) : null}
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                          setFormData((prev) => ({ ...prev, organizationDomains: [...prev.organizationDomains, ""] }))
+                        }
+                      >
+                        Add domain
+                      </Button>
                     </div>
-                  
                   </div>
 
                   <Separator />
@@ -532,7 +587,7 @@ export default function ElectionSettingsPage() {
                       <span className="font-medium">Election Status</span>
                     </div>
                     <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                      {election.status}
+                      {electionScheduleLabel(election)}
                     </Badge>
                   </div>
 

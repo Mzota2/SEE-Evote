@@ -74,6 +74,8 @@ export function CreateElectionModal({ isOpen, onClose, onElectionCreated, user }
       const electionData = {
         title: formData.title,
         description: formData.description,
+        startDate: startDateTime,
+        endDate: endDateTime,
         startTime: startDateTime,
         endTime: endDateTime,
         createdBy: user.id,

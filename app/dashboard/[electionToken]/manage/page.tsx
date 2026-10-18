@@ -17,6 +17,8 @@ import {
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate } from "@/lib/types"
 import { electionTokensMatch } from "@/lib/utils"
+import { ElectionSchedule } from "@/components/elections/election-schedule"
+import { electionPhase, electionScheduleLabel } from "@/lib/election-schedule"
 import {
   Settings,
   Users,
@@ -172,7 +174,9 @@ export default function ElectionManagePage() {
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-gray-800">Election Status</h2>
-                  <Badge className={getElectionStatusColor(election.status)}>{election.status}</Badge>
+                  <Badge className={getElectionStatusColor(electionPhase(election) === "active" ? "ongoing" : electionPhase(election) === "ended" ? "closed" : "pending")}>
+                    {electionScheduleLabel(election)}
+                  </Badge>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
@@ -194,12 +198,9 @@ export default function ElectionManagePage() {
                   <div className="space-y-4">
                     <div>
                       <h3 className="font-medium text-gray-700 mb-1">Election Period</h3>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                          {new Date(election.startDate).toLocaleDateString()} -{" "}
-                          {new Date(election.endDate).toLocaleDateString()}
-                        </span>
+                      <div className="flex items-start gap-2 text-gray-600">
+                        <Calendar className="w-4 h-4 mt-0.5" />
+                        <ElectionSchedule election={election} />
                       </div>
                     </div>
                     <div>

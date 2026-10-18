@@ -58,6 +58,7 @@ export interface Election {
   backgroundImage?: string
   orgMembersOnly?: boolean
   organizationDomain?: string
+  organizationDomains?: string[]
   createdAt: Date
   approvedBy?: string
   approvedAt?: Date

@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import type { Election } from "@/lib/types"
 import { Calendar, Clock } from "lucide-react"
+import { ElectionSchedule } from "@/components/elections/election-schedule"
+import { electionPhase } from "@/lib/election-schedule"
 
 interface OngoingElectionsProps {
   elections: Election[]
@@ -11,7 +13,7 @@ interface OngoingElectionsProps {
 }
 
 export function OngoingElections({ elections, loading }: OngoingElectionsProps) {
-  const ongoingElections = elections.filter((election) => election.status === "ongoing")
+  const ongoingElections = elections.filter((election) => electionPhase(election) === "active")
 
   if (loading) {
     return (
@@ -44,9 +46,9 @@ export function OngoingElections({ elections, loading }: OngoingElectionsProps) 
                 <div className="flex-1">
                   <h3 className="font-medium text-gray-800">{election.title}</h3>
                   <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      <span>Ends: {new Date(election.endTime).toLocaleDateString()}</span>
+                    <div className="flex items-start gap-1">
+                      <Clock className="w-4 h-4 mt-0.5" />
+                      <ElectionSchedule election={election} />
                     </div>
                   </div>
                 </div>

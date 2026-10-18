@@ -18,6 +18,7 @@ import {
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate } from "@/lib/types"
 import { electionTokensMatch } from "@/lib/utils"
+import { electionEnd, electionPhase, formatElectionDateTime } from "@/lib/election-schedule"
 import { BarChart3, Trophy, Users, Clock, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -135,7 +136,7 @@ export default function ResultsPage({ params }: ResultsPageProps) {
 
   const isElectionEnded = () => {
     if (!election) return false
-    return new Date() > new Date(election.endDate)
+    return electionPhase(election) === "ended"
   }
 
   const handleApproveResults = async()=>{
@@ -167,12 +168,9 @@ export default function ResultsPage({ params }: ResultsPageProps) {
 
   const getElectionStatus = () => {
     if (!election) return "Unknown"
-    const now = new Date()
-    const startDate = new Date(election.startDate)
-    const endDate = new Date(election.endDate)
-
-    if (now < startDate) return "Not Started"
-    if (now > endDate) return "Ended"
+    const phase = electionPhase(election)
+    if (phase === "upcoming") return "Not Started"
+    if (phase === "ended") return "Ended"
     return "Active"
   }
 
@@ -218,8 +216,8 @@ export default function ResultsPage({ params }: ResultsPageProps) {
             </Badge>
             <span className="text-sm text-gray-500">
               {electionStatus === "Ended"
-                ? `Ended ${new Date(election.endDate).toLocaleDateString()}`
-                : `Ends ${new Date(election.endDate).toLocaleDateString()}`}
+                ? `Ended ${formatElectionDateTime(electionEnd(election))}`
+                : `Ends ${formatElectionDateTime(electionEnd(election))}`}
             </span>
           </div>
         </div>
@@ -253,8 +251,8 @@ export default function ResultsPage({ params }: ResultsPageProps) {
               <div>
                 <h3 className="font-semibold text-yellow-800">Preliminary Results</h3>
                 <p className="text-sm text-yellow-700">
-                  Full results will be available after the election ends on{" "}
-                  {new Date(election.endDate).toLocaleDateString()}. Current results may not reflect all votes cast.
+                  Full results will be available after the election ends{" "}
+                  {formatElectionDateTime(electionEnd(election))}. Current results may not reflect all votes cast.
                 </p>
               </div>
             </div>

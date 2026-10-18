@@ -7,12 +7,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { requestOrganisationEmailChange, readVerifiedEmail, signOut } from "@/lib/auth"
 import { restoreOrganisationMembership } from "@/lib/database"
-import { isOrganizationMemberEmail, orgEmailHint } from "@/lib/org-email"
+import { isOrganizationMemberEmail, orgEmailExamples, orgEmailHint } from "@/lib/org-email"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 
 interface OrgEmailRecoveryProps {
-  domain: string
+  domain: string | string[]
   onRestored: () => void
 }
 
@@ -23,7 +23,8 @@ export function OrgEmailRecovery({ domain, onRestored }: OrgEmailRecoveryProps) 
   const [email, setEmail] = useState("")
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
-  const example = orgEmailHint(domain)
+  const example = orgEmailExamples(domain)
+  const fieldId = `org-email-${orgEmailHint(domain)}`
 
   const handleSend = async () => {
     if (!isOrganizationMemberEmail(email, domain)) {
@@ -98,11 +99,11 @@ export function OrgEmailRecovery({ domain, onRestored }: OrgEmailRecoveryProps) 
         </p>
       ) : (
       <div className="space-y-2">
-        <Label htmlFor={`org-email-${domain}`} className="text-xs">
+        <Label htmlFor={fieldId} className="text-xs">
           Organisation email
         </Label>
         <Input
-          id={`org-email-${domain}`}
+          id={fieldId}
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}

@@ -13,13 +13,7 @@ import { electionJoinPath, electionTokensMatch } from "@/lib/utils"
 import type { Election, Role } from "@/lib/types"
 import { Clock, CheckCircle } from "lucide-react"
 import Logo from "@/components/Logo/Logo"
-
-function formatDate(value?: Date | string) {
-  if (!value) return "Date not set"
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return "Date not set"
-  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
-}
+import { ElectionSchedule } from "@/components/elections/election-schedule"
 
 export function JoinElectionPanel({ token }: { token: string }) {
   const { user, loading } = useAuth()
@@ -119,9 +113,7 @@ export function JoinElectionPanel({ token }: { token: string }) {
             <p className="text-sm font-medium text-ivote-primary">{election.organizationId}</p>
             <h1 className="text-2xl font-bold text-gray-800">{election.title}</h1>
             {election.description ? <p className="text-gray-600">{election.description}</p> : null}
-            <p className="text-sm text-gray-500">
-              {formatDate(election.startDate)} – {formatDate(election.endDate)}
-            </p>
+            <ElectionSchedule election={election} className="text-sm text-gray-500 space-y-0.5" />
 
             {waiting ? (
               <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 space-y-2">

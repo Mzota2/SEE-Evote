@@ -12,8 +12,10 @@ import { Vote, Settings, Clock, CheckCircle, XCircle, TrendingUp } from "lucide-
 import Link from "next/link"
 import Logo from "@/components/Logo/Logo"
 import { OrgEmailRecovery } from "@/components/auth/org-email-recovery"
-import { DEFAULT_ORG_DOMAIN } from "@/lib/org-email"
+import { DEFAULT_ORG_DOMAIN, electionOrganizationDomains } from "@/lib/org-email"
 import { displayElectionToken } from "@/lib/utils"
+import { ElectionSchedule } from "@/components/elections/election-schedule"
+import { electionPhase } from "@/lib/election-schedule"
 
 export default function DashboardPage() {
   const { user, loading } = useAuth()
@@ -94,8 +96,7 @@ export default function DashboardPage() {
   const isPastRole = (role: Role) => {
     const election = electionByToken.get(role.electionToken)
     if (!election) return false
-    if (election.status === "closed") return true
-    return !!election.endDate && new Date(election.endDate).getTime() < Date.now()
+    return electionPhase(election) === "ended"
   }
   const currentRoles = roles.filter((role) => !isPastRole(role))
   const pastRoles = roles.filter((role) => isPastRole(role))
@@ -127,11 +128,12 @@ export default function DashboardPage() {
           <div className="space-y-1">
             <h3 className="font-semibold text-gray-800">{election?.title || "Election"}</h3>
             <p className="text-sm text-gray-600 font-mono bg-gray-50 p-2 rounded">{displayElectionToken(role.electionToken)}</p>
+            {election ? <ElectionSchedule election={election} /> : null}
           </div>
 
           {role.revokedReason === "organisation_email" ? (
             <OrgEmailRecovery
-              domain={election?.organizationDomain || DEFAULT_ORG_DOMAIN}
+              domain={election ? electionOrganizationDomains(election) : DEFAULT_ORG_DOMAIN}
               onRestored={refreshRoles}
             />
           ) : role.status === "approved" ? (

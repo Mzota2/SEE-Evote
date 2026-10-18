@@ -6,11 +6,11 @@ import { Badge } from "@/components/ui/badge"
 import { getElections } from "@/lib/database"
 import type { Election } from "@/lib/types"
 import { Calendar, History } from "lucide-react"
+import { ElectionSchedule } from "@/components/elections/election-schedule"
+import { electionPhase } from "@/lib/election-schedule"
 
 function isPastElection(election: Election) {
-  if (election.status === "closed") return true
-  if (!election.endDate) return false
-  return new Date(election.endDate).getTime() < Date.now()
+  return electionPhase(election) === "ended"
 }
 
 export function PastElections() {
@@ -68,11 +68,9 @@ export function PastElections() {
                   <Badge variant="secondary">Closed</Badge>
                 </div>
                 <p className="text-sm text-gray-600 line-clamp-2">{election.description}</p>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>
-                    {election.endDate ? new Date(election.endDate).toLocaleDateString() : "Date unavailable"}
-                  </span>
+                <div className="flex items-start gap-2 text-xs text-gray-500">
+                  <Calendar className="h-3.5 w-3.5 mt-0.5" />
+                  <ElectionSchedule election={election} className="text-xs text-gray-500 space-y-0.5" />
                 </div>
               </div>
             </Card>

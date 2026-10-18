@@ -7,8 +7,9 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { VoterDashboard } from "@/components/dashboard/voter-dashboard"
 import { AdminDashboard } from "@/components/dashboard/admin-dashboard"
 import { VoterWaiting } from "@/components/elections/voter-waiting"
-import { deleteAllLogs, deleteAllVoterIDs, getActionLogsWithUsers, getCastedVotes, getElectionByToken, getElectionCandidates, getElectionPositions, getRegisteredVoters, getUserRoles } from "@/lib/database"
+import { deleteAllLogs, deleteAllVoterIDs, getActionLogsWithUsers, getCastedVotes, getElectionByToken, getElectionCandidates, getElectionPositions, getRegisteredVoters, getUserRoles, updateElection } from "@/lib/database"
 import { electionTokensMatch } from "@/lib/utils"
+import { electionPhase } from "@/lib/election-schedule"
 import type { AuditLog, AuditLogWithUser, Candidate, Election, Position, Role, Vote } from "@/lib/types"
 
 interface ElectionDashboardPageProps {
@@ -127,7 +128,12 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
           return
         }
 
-        setElection(fetchedElection)
+        const phase = electionPhase(fetchedElection)
+        const nextStatus = phase === "active" ? "ongoing" : phase === "ended" ? "closed" : "pending"
+        if (fetchedElection.id && fetchedElection.status !== nextStatus) {
+          await updateElection(fetchedElection.id, { status: nextStatus })
+        }
+        setElection({ ...fetchedElection, status: nextStatus })
         setUserRole(relevantRole)
 
         if (relevantRole.status === "pending" && relevantRole.role === "voter") {

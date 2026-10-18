@@ -86,13 +86,25 @@ export default function PostRegistrationPage() {
         backgroundImage = await uploadImageToCloudinary(backgroundFile, "see-evote/elections")
       }
 
+      const startDate = new Date(createForm.startDate)
+      const endDate = new Date(createForm.endDate)
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate <= startDate) {
+        toast({
+          title: "Check the schedule",
+          description: "The end date and time must be later than the start date and time.",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+
       const result = await requestElectionWorkspace(user.id, {
         title: createForm.title,
         description: createForm.description,
         organizationId: createForm.organizationId.toUpperCase(),
         totalVoters: createForm.totalVoters,
-        startDate: new Date(createForm.startDate),
-        endDate: new Date(createForm.endDate),
+        startDate,
+        endDate,
         orgMembersOnly: createForm.orgMembersOnly,
         organizationDomain: createForm.organizationDomain.trim().toLowerCase(),
         backgroundImage,
@@ -316,7 +328,7 @@ export default function PostRegistrationPage() {
 
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="startDate">Start Date</Label>
+                    <Label htmlFor="startDate">Start date and time</Label>
                     <Input
                       id="startDate"
                       type="datetime-local"
@@ -326,7 +338,7 @@ export default function PostRegistrationPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="endDate">End Date</Label>
+                    <Label htmlFor="endDate">End date and time</Label>
                     <Input
                       id="endDate"
                       type="datetime-local"

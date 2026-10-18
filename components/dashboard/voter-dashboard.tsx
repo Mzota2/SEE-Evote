@@ -8,7 +8,8 @@ import type { Candidate, Election, Position, Role } from "@/lib/types"
 import { Users, Calendar, Vote, Clock, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { displayElectionToken } from "@/lib/utils"
-import moment from 'moment'
+import { ElectionSchedule } from "@/components/elections/election-schedule"
+import { electionEnd, electionPhase, electionStart, formatElectionDateTime } from "@/lib/election-schedule"
 
 interface VoterDashboardProps {
   election: Election
@@ -22,18 +23,7 @@ export function VoterDashboard({ election, userRole, candidates, positions, regi
   const [electionStatus, setElectionStatus] = useState<"upcoming" | "active" | "ended">("upcoming")
 
   useEffect(() => {
-    const now = new Date();
-    const startDate = new Date(election.startDate)
-    const endDate = new Date(election.endDate)
-    console.log(startDate);
-
-    if (now < startDate) {
-      setElectionStatus("upcoming")
-    } else if (now >= startDate && now <= endDate) {
-      setElectionStatus("active")
-    } else {
-      setElectionStatus("ended")
-    }
+    setElectionStatus(electionPhase(election))
   }, [election])
 
   const getStatusBadge = () => {
@@ -80,12 +70,9 @@ export function VoterDashboard({ election, userRole, candidates, positions, regi
             </div>
             <p className="text-gray-600">{election.description}</p>
             <div className="flex items-center gap-4 text-sm text-gray-500">
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>
-                  {new Date(election.startDate).toLocaleDateString()} -{" "}
-                  {new Date(election.endDate).toLocaleDateString()}
-                </span>
+              <div className="flex items-start gap-1">
+                <Calendar className="w-4 h-4 mt-0.5" />
+                <ElectionSchedule election={election} className="text-sm text-gray-500 space-y-0.5" />
               </div>
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
@@ -146,8 +133,8 @@ export function VoterDashboard({ election, userRole, candidates, positions, regi
               <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-800 mb-2">Election Not Started</h3>
               <p className="text-gray-600">
-                Voting will begin on {new Date(election.startDate).toLocaleDateString()} at{" "}
-                {new Date(election.startDate).toLocaleTimeString()}
+                Voting starts {formatElectionDateTime(electionStart(election))} and ends{" "}
+                {formatElectionDateTime(electionEnd(election))}.
               </p>
             </div>
           )}
@@ -157,7 +144,7 @@ export function VoterDashboard({ election, userRole, candidates, positions, regi
               <Vote className="w-16 h-16 text-ivote-primary mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-800 mb-2">Ready to Vote</h3>
               <p className="text-gray-600 mb-4">
-                Cast your vote for the available positions. You can only vote once per position.
+                Voting is open until {formatElectionDateTime(electionEnd(election))}. You can only vote once per position.
               </p>
               <Link href={`/dashboard/${userRole.electionToken}/vote`}>
                 <Button className="bg-ivote-primary hover:bg-ivote-primary/90">Cast Your Vote</Button>
@@ -169,7 +156,7 @@ export function VoterDashboard({ election, userRole, candidates, positions, regi
             <div className="text-center py-8">
               <CheckCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-800 mb-2">Election Ended</h3>
-              <p className="text-gray-600">This election ended on {new Date(election.endDate).toLocaleDateString()}</p>
+              <p className="text-gray-600">This election ended {formatElectionDateTime(electionEnd(election))}.</p>
               {election.resultsVisible && (
                 <Link href={`/dashboard/${userRole.electionToken}/results`}>
                   <Button variant="outline" className="mt-4 bg-transparent">

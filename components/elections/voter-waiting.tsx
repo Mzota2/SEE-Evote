@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import type { Election } from "@/lib/types"
 import { Clock } from "lucide-react"
+import { ElectionSchedule } from "@/components/elections/election-schedule"
 
 export function VoterWaiting({ election, rejected = false }: { election: Election; rejected?: boolean }) {
   return (
@@ -25,6 +26,7 @@ export function VoterWaiting({ election, rejected = false }: { election: Electio
               {rejected ? "Voting rights not approved" : "Waiting for approval"}
             </div>
             <h1 className="text-2xl font-bold text-gray-800">{election.title}</h1>
+            <ElectionSchedule election={election} />
             {rejected ? (
               <p className="text-gray-700">
                 You joined this election, but the organiser did not approve your voting rights. You cannot open the ballot.

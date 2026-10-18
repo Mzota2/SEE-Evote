@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { Election } from "@/lib/types"
 import { Calendar, Clock, Users, MoreHorizontal } from "lucide-react"
+import { ElectionSchedule } from "@/components/elections/election-schedule"
+import { electionPhase, electionScheduleLabel } from "@/lib/election-schedule"
 
 interface ElectionsListProps {
   elections: Election[]
@@ -56,19 +58,18 @@ export function ElectionsList({ elections, loading, onElectionUpdate }: Election
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <h3 className="text-lg font-semibold text-gray-800">{election.title}</h3>
-                <Badge className={getStatusColor(election.status)}>{election.status}</Badge>
+                <Badge className={getStatusColor(electionPhase(election) === "active" ? "ongoing" : electionPhase(election) === "ended" ? "closed" : "pending")}>
+                  {electionScheduleLabel(election)}
+                </Badge>
               </div>
 
               {election.description && <p className="text-gray-600 mb-3">{election.description}</p>}
 
               <div className="flex items-center gap-6 text-sm text-gray-500">
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  <span>Start: {new Date(election.startTime).toLocaleDateString()}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  <span>End: {new Date(election.endTime).toLocaleDateString()}</span>
+                <div className="flex items-start gap-1">
+                  <Calendar className="w-4 h-4 mt-0.5" />
+                  <Clock className="w-4 h-4 mt-0.5" />
+                  <ElectionSchedule election={election} className="text-sm text-gray-500 space-y-0.5" />
                 </div>
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4" />

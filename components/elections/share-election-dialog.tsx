@@ -14,13 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { electionJoinPath } from "@/lib/utils"
 import type { Election } from "@/lib/types"
 import { Copy, Share2 } from "lucide-react"
-
-function formatDate(value?: Date | string) {
-  if (!value) return "Date not set"
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return "Date not set"
-  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })
-}
+import { electionEnd, electionStart, formatElectionDateTime } from "@/lib/election-schedule"
 
 async function buildShareImage(election: Election) {
   const canvas = document.createElement("canvas")
@@ -39,8 +33,9 @@ async function buildShareImage(election: Election) {
     const title = election.title.length > 42 ? `${election.title.slice(0, 39)}...` : election.title
     context.fillText(title, 64, 470)
     context.font = "32px sans-serif"
-    context.fillText(`${formatDate(election.startDate)} – ${formatDate(election.endDate)}`, 64, 530)
-    context.fillText("Join on SEE-Evote", 64, 580)
+    context.fillText(`Starts ${formatElectionDateTime(electionStart(election))}`, 64, 520)
+    context.fillText(`Ends ${formatElectionDateTime(electionEnd(election))}`, 64, 560)
+    context.fillText("Join on SEE-Evote", 64, 600)
   }
 
   if (election.backgroundImage) {
@@ -152,9 +147,8 @@ export function ShareElectionDialog({ election }: { election: Election }) {
           <div className="p-4 space-y-1">
             <p className="text-xs uppercase tracking-wide text-gray-500">{election.organizationId}</p>
             <h3 className="text-lg font-semibold text-gray-800">{election.title}</h3>
-            <p className="text-sm text-gray-600">
-              {formatDate(election.startDate)} – {formatDate(election.endDate)}
-            </p>
+            <p className="text-sm text-gray-600">Starts {formatElectionDateTime(electionStart(election))}</p>
+            <p className="text-sm text-gray-600">Ends {formatElectionDateTime(electionEnd(election))}</p>
           </div>
         </div>
 

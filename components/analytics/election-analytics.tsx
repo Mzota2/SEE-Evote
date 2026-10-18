@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { jsPDF } from "jspdf"
+import { electionEnd, electionStart, formatElectionDateTime } from "@/lib/election-schedule"
 import {
   BarChart,
   Bar,
@@ -359,8 +360,8 @@ export function ElectionAnalytics({
     doc.setFontSize(12);
     doc.text(`Election: ${election.title}`, 14, 28);
     doc.text(`Token: ${election.electionToken}`, 14, 36);
-    doc.text(`Start Date: ${election.startDate}`, 14, 44);
-    doc.text(`End Date: ${election.endDate}`, 14, 52);
+    doc.text(`Starts: ${formatElectionDateTime(electionStart(election))}`, 14, 44);
+    doc.text(`Ends: ${formatElectionDateTime(electionEnd(election))}`, 14, 52);
 
     doc.setFontSize(14);
     doc.text("Key Metrics", 14, 64);

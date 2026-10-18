@@ -17,6 +17,7 @@ import {
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate, Vote } from "@/lib/types"
 import { electionTokensMatch } from "@/lib/utils"
+import { electionEnd, electionPhase, formatElectionDateTime } from "@/lib/election-schedule"
 import { CheckCircle, Clock, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { VotingSection } from "@/components/voting/voting-section"
@@ -66,54 +67,17 @@ export default function VotePage({ params }: VotePageProps) {
           return
         }
 
-        // Check if election is active and within voting period
-        const now = new Date()
-        const startDate = new Date(fetchedElection.startDate)
-        const endDate = new Date(fetchedElection.endDate)
-
-        if (fetchedElection.status === "closed" && !(now < startDate || now > endDate)) {
-          if (fetchedElection.id) {
-            await updateElection(fetchedElection.id, {
-              ...fetchedElection,
-              status: "ongoing",
-            })
-          }
-        } else if (fetchedElection.status === "closed" && (now < startDate || now > endDate)) {
-          router.push(`/dashboard/${params.electionToken}`)
-          return
-        } else if (fetchedElection.status === "ongoing" && (now < startDate || now > endDate)) {
-          //check election status, if it is within the dates update status to ongoing
-          if (fetchedElection.id) {
-            await updateElection(fetchedElection.id, {
-              ...fetchedElection,
-              status: "closed",
-            })
-          }
-
+        const phase = electionPhase(fetchedElection)
+        const nextStatus = phase === "active" ? "ongoing" : phase === "ended" ? "closed" : "pending"
+        if (fetchedElection.id && fetchedElection.status !== nextStatus) {
+          await updateElection(fetchedElection.id, { status: nextStatus })
+        }
+        if (phase !== "active") {
           router.push(`/dashboard/${params.electionToken}`)
           return
         }
 
-        //check election status, if it is within the dates update status to ongoing
-        else if (fetchedElection.status === "pending" && !(now < startDate || now > endDate)) {
-          if (fetchedElection.id) {
-            await updateElection(fetchedElection.id, {
-              ...fetchedElection,
-              status: "ongoing",
-            })
-          }
-        } else if (fetchedElection.status === "pending" && (now < startDate || now > endDate)) {
-          if (fetchedElection.id) {
-            await updateElection(fetchedElection.id, {
-              ...fetchedElection,
-              status: "closed",
-            })
-            router.push(`/dashboard/${params.electionToken}`)
-            return
-          }
-        }
-
-        setElection(fetchedElection)
+        setElection({ ...fetchedElection, status: nextStatus })
         setUserRole(relevantRole)
 
         const { positions: fetchedPositions } = await getElectionPositions(fetchedElection.id)
@@ -143,6 +107,14 @@ export default function VotePage({ params }: VotePageProps) {
 
   const handleVoteSubmit = async (positionId: string) => {
     if (!user || !election || !selectedVotes[positionId]) return
+    if (electionPhase(election) !== "active") {
+      toast({
+        title: "Voting is closed",
+        description: `Voting runs from the start time until ${formatElectionDateTime(electionEnd(election))}.`,
+        variant: "destructive",
+      })
+      return
+    }
 
     setSubmittingVotes((prev) => ({ ...prev, [positionId]: true }))
 
@@ -231,7 +203,7 @@ export default function VotePage({ params }: VotePageProps) {
               Voting Open
             </Badge>
             <span className="text-xs sm:text-sm text-gray-500">
-              Until {new Date(election.endDate).toLocaleDateString()}
+              Until {formatElectionDateTime(electionEnd(election))}
             </span>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { Users, Calendar, Vote, Settings, BarChart, FileText, TrendingUp } from 
 import Link from "next/link"
 import { ShareElectionDialog } from "@/components/elections/share-election-dialog"
 import { displayElectionToken } from "@/lib/utils"
+import { ElectionSchedule } from "@/components/elections/election-schedule"
 
 interface AdminDashboardProps {
   election: Election
@@ -34,12 +35,9 @@ export function AdminDashboard({ election, userRole, positions, candidates, logs
             </div>
             <p className="text-gray-600">{election.description}</p>
             <div className="flex items-center gap-4 text-sm text-gray-500">
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>
-                  {new Date(election.startDate).toLocaleDateString()} -{" "}
-                  {new Date(election.endDate).toLocaleDateString()}
-                </span>
+              <div className="flex items-start gap-1">
+                <Calendar className="w-4 h-4 mt-0.5" />
+                <ElectionSchedule election={election} className="text-sm text-gray-500 space-y-0.5" />
               </div>
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />

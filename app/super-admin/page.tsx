@@ -20,6 +20,7 @@ import {
 } from "@/lib/database"
 import { toFriendlyMessage } from "@/lib/user-messages"
 import { displayElectionToken } from "@/lib/utils"
+import { ElectionSchedule } from "@/components/elections/election-schedule"
 import type { Election, User, Organization } from "@/lib/types"
 import { Clock, CheckCircle, XCircle, Calendar, Building, Copy, Users, Vote, Shield } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -432,9 +433,7 @@ function ElectionReviewCard({
             <Calendar className="w-4 h-4 mt-0.5 text-gray-500" />
             <div>
               <p className="font-medium text-gray-700">Voting dates</p>
-              <p className="text-gray-600">
-                {formatDate(election.startDate)} – {formatDate(election.endDate)}
-              </p>
+              <ElectionSchedule election={election} className="text-sm text-gray-600 space-y-0.5" />
             </div>
           </div>
           <div className="flex items-start gap-2">

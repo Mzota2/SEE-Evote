@@ -13,9 +13,10 @@ import {
 } from "firebase/firestore"
 import { db } from "./firebase"
 import { uploadImageToCloudinary } from "./cloudinary"
-import { isOrganizationMemberEmail, parseOrganizationEmail } from "./org-email"
+import { electionOrganizationDomains, isOrganizationMemberEmail, orgEmailExamples, parseOrganizationEmail } from "./org-email"
 import type { Election, Vote, Organization, User, Role, Position, Candidate, AuditLogWithUser, VoterID } from "./types"
 import { displayElectionToken, omitUndefined } from "./utils"
+import { electionPhase } from "./election-schedule"
 import { toFriendlyMessage } from "./user-messages"
 import { nanoid } from "nanoid"
 import { User } from "lucide-react"
@@ -88,6 +89,24 @@ export const castVote = async (voteData: Omit<Vote, "id" | "timestamp" | "electi
 
     if (!existingVotes.empty) {
       return { success: false, error: "You have already voted for this position" }
+    }
+
+    const electionSnap = await getDoc(doc(db, "elections", voteData.electionId))
+    if (!electionSnap.exists()) {
+      return { success: false, error: "This election could not be found." }
+    }
+    const electionRecord = electionSnap.data()
+    const phase = electionPhase({
+      startDate: electionRecord.startDate,
+      endDate: electionRecord.endDate,
+      startTime: electionRecord.startTime,
+      endTime: electionRecord.endTime,
+    })
+    if (phase === "upcoming") {
+      return { success: false, error: "Voting has not started yet. It opens at the scheduled start time." }
+    }
+    if (phase === "ended") {
+      return { success: false, error: "Voting has ended. The scheduled end time has passed." }
     }
 
     const docRef = await addDoc(collection(db, "votes"), {
@@ -384,12 +403,12 @@ export const joinElectionByToken = async (userId: string, electionToken: string)
     if (election.orgMembersOnly) {
       const userSnap = await getDoc(doc(db, "users", userId))
       const email = userSnap.exists() ? String(userSnap.data().email || "") : ""
-      const domain = election.organizationDomain || "mubas.ac.mw"
+      const domains = electionOrganizationDomains(election)
 
-      if (!isOrganizationMemberEmail(email, domain)) {
+      if (!isOrganizationMemberEmail(email, domains)) {
         return {
           success: false,
-          error: `This election is only for organisation members. Sign in with an email like bece22-yourname@${domain}.`,
+          error: `This election is only for organisation members. Sign in with an email like ${orgEmailExamples(domains)}.`,
         }
       }
     }
@@ -467,6 +486,8 @@ export const requestElectionWorkspace = async (
       electionToken,
       startDate: workspaceData.startDate,
       endDate: workspaceData.endDate,
+      startTime: workspaceData.startDate,
+      endTime: workspaceData.endDate,
       status: "pending",
       createdBy: userId,
       approval: "pending",
@@ -568,7 +589,7 @@ export const getVoterRole = async (voterId: string, electionToken:string) => {
   }
 }
 
-export const revokeNonOrganisationMembers = async (electionId: string, domain: string) => {
+export const revokeNonOrganisationMembers = async (electionId: string, domain: string | string[]) => {
   try {
     const rolesSnapshot = await getDocs(query(collection(db, "roles"), where("electionId", "==", electionId)))
     let revoked = 0
@@ -598,10 +619,10 @@ export const revokeNonOrganisationMembers = async (electionId: string, domain: s
   }
 }
 
-export const restoreOrganisationMembership = async (userId: string, email: string, domain: string) => {
+export const restoreOrganisationMembership = async (userId: string, email: string, domain: string | string[]) => {
   try {
     if (!isOrganizationMemberEmail(email, domain)) {
-      return { restored: 0, error: "That email is not an organisation email for this election." }
+      return { restored: 0, error: `That email is not an organisation email for this election. Use one like ${orgEmailExamples(domain)}.` }
     }
 
     const parsed = parseOrganizationEmail(email)
@@ -610,7 +631,7 @@ export const restoreOrganisationMembership = async (userId: string, email: strin
       program: parsed?.program || "",
       intakeYear: parsed?.year || "",
       orgLocalName: parsed?.name || "",
-      organizationDomain: parsed?.domain || domain,
+      organizationDomain: parsed?.domain || (Array.isArray(domain) ? domain[0] : domain),
     })
 
     const rolesSnapshot = await getDocs(query(collection(db, "roles"), where("userId", "==", userId)))
@@ -622,7 +643,7 @@ export const restoreOrganisationMembership = async (userId: string, email: strin
 
       const electionSnap = await getDoc(doc(db, "elections", role.electionId))
       const electionDomain = electionSnap.exists()
-        ? String(electionSnap.data().organizationDomain || domain)
+        ? electionOrganizationDomains(electionSnap.data() as { organizationDomain?: string; organizationDomains?: string[] })
         : domain
       if (!isOrganizationMemberEmail(email, electionDomain)) continue
 
@@ -646,10 +667,10 @@ export const approveVoter = async (voterId: string, electionToken: string) => {
     if (electionSnap.exists() && electionSnap.data().orgMembersOnly) {
       const userSnap = await getDoc(doc(db, "users", voterId))
       const email = userSnap.exists() ? String(userSnap.data().email || "") : ""
-      const domain = String(electionSnap.data().organizationDomain || "mubas.ac.mw")
-      if (!isOrganizationMemberEmail(email, domain)) {
+      const domains = electionOrganizationDomains(electionSnap.data() as { organizationDomain?: string; organizationDomains?: string[] })
+      if (!isOrganizationMemberEmail(email, domains)) {
         return {
-          error: `This voter must use an organisation email like bece22-yourname@${domain} before they can be approved.`,
+          error: `This voter must use an organisation email like ${orgEmailExamples(domains)} before they can be approved.`,
         }
       }
     }

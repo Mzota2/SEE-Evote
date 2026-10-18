@@ -24,6 +24,7 @@ import {
   revokeNonOrganisationMembers,
 } from "@/lib/database"
 import type { Election, Role, VoterID } from "@/lib/types"
+import { electionTokensMatch } from "@/lib/utils"
 import {
   Settings,
   Calendar,
@@ -104,7 +105,7 @@ export default function ElectionSettingsPage() {
         }
 
         const adminRole = rolesResult.roles.find(
-          (role) => role.electionToken === electionToken && role.role === "admin",
+          (role) => electionTokensMatch(role.electionToken, electionToken) && role.role === "admin",
         )
         setUserRole(adminRole || null)
 

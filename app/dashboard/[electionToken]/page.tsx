@@ -8,6 +8,7 @@ import { VoterDashboard } from "@/components/dashboard/voter-dashboard"
 import { AdminDashboard } from "@/components/dashboard/admin-dashboard"
 import { VoterWaiting } from "@/components/elections/voter-waiting"
 import { deleteAllLogs, deleteAllVoterIDs, getActionLogsWithUsers, getCastedVotes, getElectionByToken, getElectionCandidates, getElectionPositions, getRegisteredVoters, getUserRoles } from "@/lib/database"
+import { electionTokensMatch } from "@/lib/utils"
 import type { AuditLog, AuditLogWithUser, Candidate, Election, Position, Role, Vote } from "@/lib/types"
 
 interface ElectionDashboardPageProps {
@@ -111,8 +112,13 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
           return
         }
 
-        const { roles } = await getUserRoles(user.id)
-        const relevantRole = roles.find((role) => role.electionToken === params.electionToken)
+        const { roles, error: rolesError } = await getUserRoles(user.id)
+        if (rolesError) {
+          setError("We could not open this election. Please try again.")
+          setLoadingData(false)
+          return
+        }
+        const relevantRole = roles.find((role) => electionTokensMatch(role.electionToken, params.electionToken))
 
         if (!relevantRole) {
           setElection(fetchedElection)

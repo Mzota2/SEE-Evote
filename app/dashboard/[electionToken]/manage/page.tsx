@@ -16,6 +16,7 @@ import {
   getDetailedVoteResults,
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate } from "@/lib/types"
+import { electionTokensMatch } from "@/lib/utils"
 import {
   Settings,
   Users,
@@ -70,7 +71,7 @@ export default function ElectionManagePage() {
         }
 
         const adminRole = rolesResult.roles.find(
-          (role) => role.electionToken === electionToken && role.role === "admin",
+          (role) => electionTokensMatch(role.electionToken, electionToken) && role.role === "admin",
         )
         setUserRole(adminRole || null)
 

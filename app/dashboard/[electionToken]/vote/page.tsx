@@ -16,6 +16,7 @@ import {
   updateElection,
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate, Vote } from "@/lib/types"
+import { electionTokensMatch } from "@/lib/utils"
 import { CheckCircle, Clock, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { VotingSection } from "@/components/voting/voting-section"
@@ -53,7 +54,7 @@ export default function VotePage({ params }: VotePageProps) {
         const { election: fetchedElection } = await getElectionByToken(params.electionToken)
         const { roles } = await getUserRoles(user.id)
         console.log("roles", roles)
-        const relevantRole = roles.find((role) => role.electionToken === params.electionToken)
+        const relevantRole = roles.find((role) => electionTokensMatch(role.electionToken, params.electionToken))
 
         if (!fetchedElection || !relevantRole) {
           router.push("/dashboard")

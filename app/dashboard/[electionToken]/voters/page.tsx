@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { VotersList } from "@/components/admin/voters-list"
 import { getUserRoles, getUsersByOrganization } from "@/lib/database"
+import { electionTokensMatch } from "@/lib/utils"
 import type { Role, User } from "@/lib/types"
 
 interface ElectionDashboardPageProps {
@@ -37,7 +38,7 @@ export default function VotersPage({ params }: ElectionDashboardPageProps) {
         // Fetch user roles to verify access
         const { roles } = await getUserRoles(user.id)
         const relevantRole = roles.find(
-          (role) => (role.electionToken === params.electionToken) && (role.status === "approved"),
+          (role) => electionTokensMatch(role.electionToken, params.electionToken) && role.status === "approved",
         )
 
         if (!relevantRole) {

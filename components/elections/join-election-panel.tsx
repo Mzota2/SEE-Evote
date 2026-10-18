@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { getElectionByToken, getUserRoles, joinElectionByToken } from "@/lib/database"
 import { toFriendlyMessage } from "@/lib/user-messages"
-import { electionJoinPath } from "@/lib/utils"
+import { electionJoinPath, electionTokensMatch } from "@/lib/utils"
 import type { Election, Role } from "@/lib/types"
 import { Clock, CheckCircle } from "lucide-react"
 import Logo from "@/components/Logo/Logo"
@@ -43,7 +43,7 @@ export function JoinElectionPanel({ token }: { token: string }) {
       setElection(fetched)
       if (user) {
         const { roles } = await getUserRoles(user.id)
-        setRole(roles.find((item) => item.electionToken === fetched.electionToken) || null)
+        setRole(roles.find((item) => electionTokensMatch(item.electionToken, fetched.electionToken)) || null)
       }
       setLoadingElection(false)
     }

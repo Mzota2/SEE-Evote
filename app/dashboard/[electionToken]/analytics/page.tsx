@@ -14,6 +14,7 @@ import {
   getActionLogsWithUsers,
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate, AuditLogWithUser } from "@/lib/types"
+import { electionTokensMatch } from "@/lib/utils"
 
 interface AnalyticsPageProps {
   params: {
@@ -56,7 +57,7 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
         // Verify user access
         const { roles } = await getUserRoles(user.id)
         const relevantRole = roles.find(
-          (role) => role.electionToken === params.electionToken && role.status === "approved",
+          (role) => electionTokensMatch(role.electionToken, params.electionToken) && role.status === "approved",
         )
 
         if (!relevantRole || relevantRole.role !== "admin") {

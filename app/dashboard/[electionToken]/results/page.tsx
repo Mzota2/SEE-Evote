@@ -17,6 +17,7 @@ import {
   disapproveElectionResults,
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate } from "@/lib/types"
+import { electionTokensMatch } from "@/lib/utils"
 import { BarChart3, Trophy, Users, Clock, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -65,7 +66,7 @@ export default function ResultsPage({ params }: ResultsPageProps) {
         const { election: fetchedElection } = await getElectionByToken(params.electionToken)
         const { roles } = await getUserRoles(user.id)
         const relevantRole = roles.find(
-          (role) => role.electionToken === params.electionToken && role.status === "approved",
+          (role) => electionTokensMatch(role.electionToken, params.electionToken) && role.status === "approved",
         )
 
         if (!fetchedElection || !relevantRole) {

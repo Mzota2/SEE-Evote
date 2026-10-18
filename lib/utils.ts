@@ -15,6 +15,22 @@ export function electionJoinPath(token: string) {
   return `/join/${encodeURIComponent(token)}`
 }
 
+/** Compare election codes after decoding and removing spaces, so "My Org" matches "My%20Org". */
+export function electionTokensMatch(left?: string | null, right?: string | null) {
+  if (!left || !right) return false
+  return compactElectionToken(left) === compactElectionToken(right)
+}
+
+function compactElectionToken(value: string) {
+  let token = value
+  try {
+    token = decodeURIComponent(value)
+  } catch {
+    token = value
+  }
+  return token.replace(/\s+/g, "")
+}
+
 /** Firestore rejects undefined field values. Drop them before every write. */
 export function omitUndefined<T extends Record<string, unknown>>(data: T): T {
   return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)) as T

@@ -525,7 +525,9 @@ export const checkOrganizationExists = async (searchTerm: string): Promise<strin
 export const getUserRoles = async (userId: string) => {
   try {
     console.log(userId);
-    const rolesQuery = query(collection(db, "roles"), where("userId", "==", userId), orderBy("createdAt", "desc"))
+    // Single-field lookup. Adding orderBy(createdAt) needs a composite index and
+    // returns no roles while that index is missing, which looks like "not joined".
+    const rolesQuery = query(collection(db, "roles"), where("userId", "==", userId))
     const rolesSnapshot = await getDocs(rolesQuery)
     const roles = rolesSnapshot.docs.map((doc) => {
       return {
@@ -533,11 +535,21 @@ export const getUserRoles = async (userId: string) => {
         ...doc.data(),
       } as Role
     })
+    roles.sort((a, b) => roleCreatedAt(b) - roleCreatedAt(a))
     console.log(roles);
     return { roles, error: null }
   } catch (error: any) {
     return { roles: [], error: error.message }
   }
+}
+
+function roleCreatedAt(role: Role) {
+  const value = role.createdAt as unknown
+  if (value && typeof value === "object" && "toMillis" in value && typeof (value as { toMillis: () => number }).toMillis === "function") {
+    return (value as { toMillis: () => number }).toMillis()
+  }
+  const time = new Date(value as string | number | Date).getTime()
+  return Number.isNaN(time) ? 0 : time
 }
 
 export const getVoterRole = async (voterId: string, electionToken:string) => {

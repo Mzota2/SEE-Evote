@@ -21,6 +21,7 @@ import {
   deletePosition,
 } from "@/lib/database"
 import type { Election, Role, Position } from "@/lib/types"
+import { electionTokensMatch } from "@/lib/utils"
 import { Plus, Edit, Trash2, Save, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -60,7 +61,7 @@ export default function PositionsPage({ params }: PositionsPageProps) {
         const { election: fetchedElection } = await getElectionByToken(params.electionToken)
         const { roles } = await getUserRoles(user.id)
         const relevantRole = roles.find(
-          (role) => role.electionToken === params.electionToken && role.status === "approved" && role.role === "admin",
+          (role) => electionTokensMatch(role.electionToken, params.electionToken) && role.status === "approved" && role.role === "admin",
         )
 
         if (!fetchedElection || !relevantRole) {

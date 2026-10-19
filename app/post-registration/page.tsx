@@ -362,14 +362,14 @@ export default function PostRegistrationPage() {
                   </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="background">Election background picture</Label>
+                  <Label htmlFor="background">Organisation Logo</Label>
                   <Input
                     id="background"
                     type="file"
                     accept="image/*"
                     onChange={(e) => setBackgroundFile(e.target.files?.[0] || null)}
                   />
-                  <p className="text-xs text-gray-500">A wide photo looks best on the election card. You can skip this.</p>
+                  <p className="text-xs text-gray-500">The logo will be displayed on the election card and will be used on the official documents.</p>
                 </div>
 
                 <div className="flex items-center justify-between rounded-lg border p-4">

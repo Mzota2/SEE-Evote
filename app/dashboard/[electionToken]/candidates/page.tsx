@@ -27,6 +27,7 @@ import { electionTokensMatch } from "@/lib/utils"
 import { Plus, Edit, Trash2, Save, X, User } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
+import { CandidatePhotoField } from "@/components/admin/candidate-photo-field"
 
 interface CandidatesPageProps {
   params: {
@@ -246,46 +247,11 @@ export default function CandidatesPage({ params }: CandidatesPageProps) {
                   <X className="w-4 h-4" />
                 </Button>
               </div>
-               <div className="space-y-2">
-                  <Label htmlFor="image">Candidate Photo</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-[200px] h-[200px] rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200">
-                      {imagePreview ? (
-                        <Image
-                          height={200}
-                          width={200}
-                          src={imagePreview}
-                          alt="Preview"
-                          className="object-cover w-full h-full !rounded-full"
-                        />
-                      ) : (
-                        <span className="text-gray-400">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="w-8 h-8"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2zm16 0l-4.586 4.586a2 2 0 01-2.828 0L7 7"
-                            />
-                          </svg>
-                        </span>
-                      )}
-                    </div>
-                    <Input
-                      id="image"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setImageData(() => (e.target.files ? e.target.files[0] : null))}
-                      className="w-fit"
-                    />
-                  </div>
-                </div>
+              <CandidatePhotoField
+                id="candidate-image"
+                previewUrl={imagePreview}
+                onFile={setImageData}
+              />
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -493,46 +459,11 @@ function EditCandidateForm({
   
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-       <div className="space-y-2">
-                  <Label htmlFor="image">Candidate Photo</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="w-[200px] h-[200px] rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200">
-                      {imagePreview ? (
-                        <Image
-                          height={200}
-                          width={200}
-                          src={imagePreview}
-                          alt="Preview"
-                          className="object-cover w-full h-full !rounded-full"
-                        />
-                      ) : (
-                        <span className="text-gray-400">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="w-8 h-8"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2zm16 0l-4.586 4.586a2 2 0 01-2.828 0L7 7"
-                            />
-                          </svg>
-                        </span>
-                      )}
-                    </div>
-                    <Input
-                      id="image"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setImageData(() => (e.target.files ? e.target.files[0] : null))}
-                      className="w-fit"
-                    />
-                  </div>
-                </div>
+      <CandidatePhotoField
+        id={`edit-candidate-image-${candidate.id}`}
+        previewUrl={imagePreview}
+        onFile={setImageData}
+      />
 
       <div className="space-y-2">
         <Label htmlFor="edit-name">Name</Label>

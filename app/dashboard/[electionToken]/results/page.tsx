@@ -19,8 +19,10 @@ import {
 import type { Election, Role, Position, Candidate } from "@/lib/types"
 import { electionTokensMatch } from "@/lib/utils"
 import { electionEnd, electionPhase, formatElectionDateTime } from "@/lib/election-schedule"
-import { BarChart3, Trophy, Users, Clock, CheckCircle } from "lucide-react"
+import { BarChart3, Trophy, Users, Clock, CheckCircle, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { downloadResultsPoster } from "@/lib/results-poster"
 
 interface ResultsPageProps {
   params: {
@@ -53,6 +55,8 @@ export default function ResultsPage({ params }: ResultsPageProps) {
   const [totalVotes, setTotalVotes] = useState(0)
   const [loadingData, setLoadingData] = useState(true)
   const [loadingResultsApproval, setLoadingResultsApproval] = useState(false);
+  const [exportingPoster, setExportingPoster] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     if (!loading && !user) {
@@ -174,6 +178,37 @@ export default function ResultsPage({ params }: ResultsPageProps) {
     return "Active"
   }
 
+  const handleDownloadPoster = async () => {
+    if (!election) return
+    setExportingPoster(true)
+    try {
+      await downloadResultsPoster({
+        electionTitle: election.title,
+        organizationName: election.organizationId,
+        organizationLogo: election.backgroundImage,
+        positions: positionResults.map((result) => ({
+          title: result.position.title,
+          order: result.position.order,
+          candidates: result.candidates.map((candidate) => ({
+            name: candidate.candidate.name,
+            image: candidate.candidate.image,
+            votes: candidate.votes,
+            isWinner: candidate.isWinner,
+          })),
+        })),
+      })
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: "Could not create the poster",
+        description: "Try the download again.",
+        variant: "destructive",
+      })
+    } finally {
+      setExportingPoster(false)
+    }
+  }
+
   if (loading || loadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -220,6 +255,17 @@ export default function ResultsPage({ params }: ResultsPageProps) {
                 : `Ends ${formatElectionDateTime(electionEnd(election))}`}
             </span>
           </div>
+          {showFullResults ? (
+            <Button
+              type="button"
+              onClick={handleDownloadPoster}
+              disabled={exportingPoster}
+              className="mt-4 bg-ivote-primary hover:bg-ivote-primary/90"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {exportingPoster ? "Preparing poster..." : "Download results poster"}
+            </Button>
+          ) : null}
         </div>
 
         {/* Overall Stats */}

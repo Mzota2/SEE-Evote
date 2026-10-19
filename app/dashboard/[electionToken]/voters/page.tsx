@@ -67,7 +67,7 @@ export default function VotersPage({ params }: ElectionDashboardPageProps) {
         const { users: fetchedUsers, error } = await getUsersByOrganization(userRole.organizationId)
         console.log('voters',fetchedUsers)
         console.log(error);
-        setVoters(fetchedUsers.filter((u) => u.id !== user.id))
+        setVoters(fetchedUsers)
         setLoadingVoters(false)
       }
     }
@@ -91,7 +91,7 @@ export default function VotersPage({ params }: ElectionDashboardPageProps) {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Voters Management</h1>
-          <p className="text-gray-600">Manage registered voters and their permissions</p>
+          <p className="text-gray-600">Administrators are listed separately from voters who have voted and voters who have not.</p>
         </div>
 
         <VotersList electionToken={userRole.electionId} voters={voters} loading={loadingVoters} onVotersUpdate={setVoters} />

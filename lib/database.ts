@@ -507,8 +507,9 @@ export const requestElectionWorkspace = async (
       electionToken,
       organizationId: workspaceData.organizationId,
       role: "admin",
-      status: "pending",
+      status: "approved",
       createdAt: serverTimestamp(),
+      approvedAt: serverTimestamp(),
     })
 
     // Log the action
@@ -1159,6 +1160,106 @@ export const deleteCandidate = async (candidateId: string) => {
 }
 
 // MANAGEMENT
+
+export const ensureRequesterAdmin = async (userId: string, election: Election) => {
+  try {
+    if (!election?.id || election.createdBy !== userId) return { granted: false, error: null }
+
+    const rolesQuery = query(
+      collection(db, "roles"),
+      where("userId", "==", userId),
+      where("electionId", "==", election.id),
+      where("role", "==", "admin"),
+    )
+    const rolesSnapshot = await getDocs(rolesQuery)
+
+    if (rolesSnapshot.empty) {
+      await addDoc(collection(db, "roles"), {
+        userId,
+        electionId: election.id,
+        electionToken: election.electionToken,
+        organizationId: election.organizationId,
+        role: "admin",
+        status: "approved",
+        createdAt: serverTimestamp(),
+        approvedAt: serverTimestamp(),
+      })
+      return { granted: true, error: null }
+    }
+
+    const roleDoc = rolesSnapshot.docs[0]
+    const status = String(roleDoc.data().status || "")
+    if (status === "rejected") return { granted: false, error: null }
+    if (status !== "approved") {
+      await updateDoc(roleDoc.ref, {
+        status: "approved",
+        approvedAt: serverTimestamp(),
+      })
+    }
+    return { granted: true, error: null }
+  } catch (error: any) {
+    return { granted: false, error: error.message }
+  }
+}
+
+export const setUserElectionRole = async (userId: string, electionId: string, nextRole: "admin" | "voter") => {
+  try {
+    const rolesQuery = query(collection(db, "roles"), where("userId", "==", userId), where("electionId", "==", electionId))
+    const rolesSnapshot = await getDocs(rolesQuery)
+    const roleDoc = rolesSnapshot.docs.find((item) => item.data().role !== "superAdmin")
+    if (!roleDoc) return { error: "This person does not belong to this election." }
+
+    await updateDoc(roleDoc.ref, {
+      role: nextRole,
+      ...(nextRole === "admin" ? { status: "approved", approvedAt: serverTimestamp() } : {}),
+    })
+    return { error: null }
+  } catch (error: any) {
+    return { error: error.message }
+  }
+}
+
+export const getVotingProgress = async (electionIds: string[]) => {
+  const progress: Record<string, { registered: number; approved: number; voted: number }> = {}
+  const votedByElection: Record<string, Set<string>> = {}
+  electionIds.forEach((id) => {
+    progress[id] = { registered: 0, approved: 0, voted: 0 }
+    votedByElection[id] = new Set()
+  })
+
+  try {
+    for (let index = 0; index < electionIds.length; index += 10) {
+      const chunk = electionIds.slice(index, index + 10)
+      if (chunk.length === 0) continue
+      const [rolesSnapshot, votesSnapshot] = await Promise.all([
+        getDocs(query(collection(db, "roles"), where("electionId", "in", chunk))),
+        getDocs(query(collection(db, "votes"), where("electionId", "in", chunk))),
+      ])
+
+      rolesSnapshot.docs.forEach((roleDoc) => {
+        const data = roleDoc.data()
+        const electionId = String(data.electionId || "")
+        if (!progress[electionId] || data.role !== "voter") return
+        progress[electionId].registered += 1
+        if (data.status === "approved") progress[electionId].approved += 1
+      })
+
+      votesSnapshot.docs.forEach((voteDoc) => {
+        const data = voteDoc.data()
+        const electionId = String(data.electionId || "")
+        const voterId = String(data.voterId || "")
+        if (votedByElection[electionId] && voterId) votedByElection[electionId].add(voterId)
+      })
+    }
+
+    electionIds.forEach((id) => {
+      progress[id].voted = votedByElection[id]?.size || 0
+    })
+    return { progress, error: null }
+  } catch (error: any) {
+    return { progress, error: error.message }
+  }
+}
 
 export const checkUserSuperAdminRole = async (userId: string): Promise<boolean> => {
   try {

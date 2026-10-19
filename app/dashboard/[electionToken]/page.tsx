@@ -7,8 +7,8 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { VoterDashboard } from "@/components/dashboard/voter-dashboard"
 import { AdminDashboard } from "@/components/dashboard/admin-dashboard"
 import { VoterWaiting } from "@/components/elections/voter-waiting"
-import { deleteAllLogs, deleteAllVoterIDs, getActionLogsWithUsers, getCastedVotes, getElectionByToken, getElectionCandidates, getElectionPositions, getRegisteredVoters, getUserRoles, updateElection } from "@/lib/database"
-import { electionTokensMatch } from "@/lib/utils"
+import { deleteAllLogs, deleteAllVoterIDs, getActionLogsWithUsers, getCastedVotes, getElectionCandidates, getElectionPositions, getRegisteredVoters, updateElection } from "@/lib/database"
+import { canManageElection, openElection } from "@/lib/election-access"
 import { electionPhase } from "@/lib/election-schedule"
 import type { AuditLog, AuditLogWithUser, Candidate, Election, Position, Role, Vote } from "@/lib/types"
 
@@ -105,21 +105,13 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
 
       try {
         // Fetch election data
-        const { election: fetchedElection, error: electionError } = await getElectionByToken(params.electionToken)
-        
-        if (electionError || !fetchedElection) {
-          setError("We could not find this election.")
-          setLoadingData(false)
-          return
-        }
+        const { election: fetchedElection, role: relevantRole, error: accessError } = await openElection(user.id, params.electionToken)
 
-        const { roles, error: rolesError } = await getUserRoles(user.id)
-        if (rolesError) {
-          setError("We could not open this election. Please try again.")
+        if (!fetchedElection) {
+          setError(accessError || "We could not find this election.")
           setLoadingData(false)
           return
         }
-        const relevantRole = roles.find((role) => electionTokensMatch(role.electionToken, params.electionToken))
 
         if (!relevantRole) {
           setElection(fetchedElection)
@@ -243,7 +235,7 @@ export default function ElectionDashboardPage({ params }: ElectionDashboardPageP
 
   return (
     <DashboardLayout electionToken={params.electionToken} userRole={userRole.role}>
-      {userRole.role === "admin" ? (
+      {canManageElection(userRole) ? (
         <AdminDashboard registeredVoters={registeredVoters} castedVotes={castedVotes} logs={auditLogs} positions={positions} candidates={candidates} election={election} userRole={userRole} />
       ) : (
         <VoterDashboard registeredVoters={registeredVoters} positions={positions} candidates={candidates} election={election} userRole={userRole} />

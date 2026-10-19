@@ -17,9 +17,11 @@ import {
   getAllElections,
   getAllUsers,
   getAllOrganizations,
+  getVotingProgress,
 } from "@/lib/database"
 import { toFriendlyMessage } from "@/lib/user-messages"
 import { displayElectionToken } from "@/lib/utils"
+import { Progress } from "@/components/ui/progress"
 import { ElectionSchedule } from "@/components/elections/election-schedule"
 import type { Election, User, Organization } from "@/lib/types"
 import { Clock, CheckCircle, XCircle, Calendar, Building, Copy, Users, Vote, Shield } from "lucide-react"
@@ -48,6 +50,7 @@ export default function SuperAdminPage() {
   const [loadingData, setLoadingData] = useState(true)
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({})
+  const [progressByElection, setProgressByElection] = useState<Record<string, { registered: number; approved: number; voted: number }>>({})
 
   const pendingRequests = allElections.filter(needsDecision)
 
@@ -82,6 +85,8 @@ export default function SuperAdminPage() {
           setAllElections(electionsResult.elections)
           setAllUsers(usersResult.users)
           setAllOrganizations(orgsResult.organizations)
+          const progressResult = await getVotingProgress(electionsResult.elections.map((election) => election.id))
+          setProgressByElection(progressResult.progress)
 
           if (electionsResult.error) {
             toast({
@@ -231,9 +236,9 @@ export default function SuperAdminPage() {
           </Link>
           <div className="flex items-center justify-center gap-2 mb-2">
             <Shield className="w-6 h-6 text-ivote-primary" />
-            <h1 className="text-3xl font-bold text-gray-800">Review elections</h1>
+            <h1 className="text-3xl font-bold text-gray-800">Manage elections</h1>
           </div>
-          <p className="text-gray-600">Approve an election so people can join, or send it back with a short reason.</p>
+          <p className="text-gray-600">Open any election, follow who has voted, and manage voters, roles, candidates, and settings.</p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -311,6 +316,7 @@ export default function SuperAdminPage() {
                   onApprove={() => handleApprove(election.id)}
                   onReject={() => handleReject(election.id)}
                   onCopy={() => copyToken(election.electionToken)}
+                  progress={progressByElection[election.id]}
                 />
               ))
             )}
@@ -332,6 +338,7 @@ export default function SuperAdminPage() {
                   onApprove={() => handleApprove(election.id)}
                   onReject={() => handleReject(election.id)}
                   onCopy={() => copyToken(election.electionToken)}
+                  progress={progressByElection[election.id]}
                 />
               ))
             )}
@@ -388,6 +395,7 @@ function ElectionReviewCard({
   onApprove,
   onReject,
   onCopy,
+  progress,
 }: {
   election: Election
   busy: boolean
@@ -396,8 +404,12 @@ function ElectionReviewCard({
   onApprove: () => void
   onReject: () => void
   onCopy: () => void
+  progress?: { registered: number; approved: number; voted: number }
 }) {
   const waiting = needsDecision(election)
+  const stats = progress || { registered: 0, approved: 0, voted: 0 }
+  const turnout = stats.approved ? Math.round((stats.voted / stats.approved) * 100) : 0
+  const manageBase = `/dashboard/${encodeURIComponent(election.electionToken)}`
 
   return (
     <Card className="overflow-hidden">
@@ -444,6 +456,38 @@ function ElectionReviewCard({
               {election.orgMembersOnly ? <p className="text-gray-500">Organisation members only</p> : null}
             </div>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <p className="font-medium text-gray-700">Voting progress</p>
+            <p className="text-gray-600">{turnout}%</p>
+          </div>
+          <Progress value={turnout} className="h-2" />
+          <p className="text-sm text-gray-600">
+            {stats.voted} voted · {stats.approved} approved · {stats.registered} joined
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Link href={manageBase}>
+            <Button type="button" size="sm" className="bg-ivote-primary hover:bg-ivote-primary/90">Open dashboard</Button>
+          </Link>
+          <Link href={`${manageBase}/voters`}>
+            <Button type="button" size="sm" variant="outline">Voters and roles</Button>
+          </Link>
+          <Link href={`${manageBase}/positions`}>
+            <Button type="button" size="sm" variant="outline">Positions</Button>
+          </Link>
+          <Link href={`${manageBase}/candidates`}>
+            <Button type="button" size="sm" variant="outline">Candidates</Button>
+          </Link>
+          <Link href={`${manageBase}/results`}>
+            <Button type="button" size="sm" variant="outline">Results</Button>
+          </Link>
+          <Link href={`${manageBase}/settings`}>
+            <Button type="button" size="sm" variant="outline">Settings</Button>
+          </Link>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">

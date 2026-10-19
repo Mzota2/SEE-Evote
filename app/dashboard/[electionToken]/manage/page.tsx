@@ -9,14 +9,12 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  getElectionByToken,
-  getUserRoles,
   getElectionPositions,
   getElectionCandidates,
   getDetailedVoteResults,
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate } from "@/lib/types"
-import { electionTokensMatch } from "@/lib/utils"
+import { canManageElection, openElection } from "@/lib/election-access"
 import { ElectionSchedule } from "@/components/elections/election-schedule"
 import { electionPhase, electionScheduleLabel } from "@/lib/election-schedule"
 import {
@@ -52,34 +50,24 @@ export default function ElectionManagePage() {
       if (!user) return
 
       try {
-        const [electionResult, rolesResult] = await Promise.all([
-          getElectionByToken(electionToken),
-          getUserRoles(user.id),
+        const access = await openElection(user.id, electionToken)
+        if (!access.election || !canManageElection(access.role)) {
+          router.push(`/dashboard/${electionToken}`)
+          return
+        }
+
+        setElection(access.election)
+        setUserRole(access.role)
+
+        const [positionsResult, candidatesResult, resultsResult] = await Promise.all([
+          getElectionPositions(access.election.id),
+          getElectionCandidates(access.election.id),
+          getDetailedVoteResults(access.election.id),
         ])
 
-        if (electionResult.election) {
-          setElection(electionResult.election)
-
-          // Fetch additional data
-          const [positionsResult, candidatesResult, resultsResult] = await Promise.all([
-            getElectionPositions(electionResult.election.id),
-            getElectionCandidates(electionResult.election.id),
-            getDetailedVoteResults(electionResult.election.id),
-          ])
-
-          setPositions(positionsResult.positions)
-          setCandidates(candidatesResult.candidates)
-          setVoteResults(resultsResult)
-        }
-
-        const adminRole = rolesResult.roles.find(
-          (role) => electionTokensMatch(role.electionToken, electionToken) && role.role === "admin",
-        )
-        setUserRole(adminRole || null)
-
-        if (!adminRole) {
-          router.push(`/dashboard/${electionToken}`)
-        }
+        setPositions(positionsResult.positions)
+        setCandidates(candidatesResult.candidates)
+        setVoteResults(resultsResult)
       } catch (error) {
         console.error("Error fetching data:", error)
       } finally {

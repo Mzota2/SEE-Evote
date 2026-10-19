@@ -8,8 +8,6 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import {
-  getElectionByToken,
-  getUserRoles,
   getElectionPositions,
   getElectionCandidates,
   getVoteResults,
@@ -17,7 +15,7 @@ import {
   disapproveElectionResults,
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate } from "@/lib/types"
-import { electionTokensMatch } from "@/lib/utils"
+import { canManageElection, openElection } from "@/lib/election-access"
 import { electionEnd, electionPhase, formatElectionDateTime } from "@/lib/election-schedule"
 import { BarChart3, Trophy, Users, Clock, CheckCircle, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -68,11 +66,7 @@ export default function ResultsPage({ params }: ResultsPageProps) {
       if (!user) return
 
       try {
-        const { election: fetchedElection } = await getElectionByToken(params.electionToken)
-        const { roles } = await getUserRoles(user.id)
-        const relevantRole = roles.find(
-          (role) => electionTokensMatch(role.electionToken, params.electionToken) && role.status === "approved",
-        )
+        const { election: fetchedElection, role: relevantRole } = await openElection(user.id, params.electionToken)
 
         if (!fetchedElection || !relevantRole) {
           router.push("/dashboard")
@@ -225,7 +219,7 @@ export default function ResultsPage({ params }: ResultsPageProps) {
   }
 
   const electionStatus = getElectionStatus()
-  const showFullResults = (election.resultsVisible || userRole.role === "admin") && (isElectionEnded() || userRole.role === "admin")
+  const showFullResults = (election.resultsVisible || canManageElection(userRole)) && (isElectionEnded() || canManageElection(userRole))
   console.log(election.resultsVisible);
   return (
     <DashboardLayout electionToken={params.electionToken} userRole={userRole.role}>
@@ -375,7 +369,7 @@ export default function ResultsPage({ params }: ResultsPageProps) {
 
         {/* APPROVE/DISAPPROVE RESULTS SECTION ADMIN */}
         {
-          showFullResults && userRole.role === "admin" && (
+          showFullResults && canManageElection(userRole) && (
             <Card className="p-6 bg-green-50 border-green-200">
               <div className="flex items-center gap-3 mb-4">
               <BarChart3 className="w-6 h-6 text-green-600" />
@@ -413,7 +407,7 @@ export default function ResultsPage({ params }: ResultsPageProps) {
     
 
         {/* Final Results Message */}
-        {showFullResults && isElectionEnded() && userRole.role !== "admin" && (
+        {showFullResults && isElectionEnded() && !canManageElection(userRole) && (
           <Card className="p-6 bg-blue-50 border-blue-200 text-center">
             <CheckCircle className="w-12 h-12 text-blue-600 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-blue-800 mb-2">Election Complete</h3>

@@ -15,7 +15,6 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import {
   getElectionByToken,
-  getUserRoles,
   updateElection,
   generateElectionVoterIDs,
   getGeneratedVoterIDs,
@@ -24,7 +23,8 @@ import {
   revokeNonOrganisationMembers,
 } from "@/lib/database"
 import type { Election, Role, VoterID } from "@/lib/types"
-import { displayElectionToken, electionTokensMatch } from "@/lib/utils"
+import { displayElectionToken } from "@/lib/utils"
+import { canManageElection, openElection } from "@/lib/election-access"
 import { electionScheduleLabel, toDateTimeLocalValue } from "@/lib/election-schedule"
 import {
   Settings,
@@ -80,39 +80,28 @@ export default function ElectionSettingsPage() {
       if (!user) return
 
       try {
-        const [electionResult, rolesResult] = await Promise.all([
-          getElectionByToken(electionToken),
-          getUserRoles(user.id),
-        ])
-        setVoterCount(electionResult.election?.totalVoters as number);
-
-        if (electionResult.election) {
-          setElection(electionResult.election)
-          setFormData({
-            title: electionResult.election.title,
-            description: electionResult.election.description,
-            startDate: toDateTimeLocalValue(electionResult.election.startDate || electionResult.election.startTime),
-            endDate: toDateTimeLocalValue(electionResult.election.endDate || electionResult.election.endTime),
-            resultsVisible: electionResult.election.resultsVisible || false,
-            backgroundImage: electionResult.election.backgroundImage || "",
-            orgMembersOnly: !!electionResult.election.orgMembersOnly,
-            organizationDomains: electionOrganizationDomains(electionResult.election),
-          })
-
-          // Fetch voter IDs
-          const voterIDsResult = await getGeneratedVoterIDs(electionResult.election.id)
-          console.log(voterIDsResult);
-          setVoterIDs(voterIDsResult.voterIDs)
-        }
-
-        const adminRole = rolesResult.roles.find(
-          (role) => electionTokensMatch(role.electionToken, electionToken) && role.role === "admin",
-        )
-        setUserRole(adminRole || null)
-
-        if (!adminRole) {
+        const access = await openElection(user.id, electionToken)
+        if (!access.election || !canManageElection(access.role)) {
           router.push(`/dashboard/${electionToken}`)
+          return
         }
+
+        setVoterCount(access.election.totalVoters as number)
+        setElection(access.election)
+        setUserRole(access.role)
+        setFormData({
+          title: access.election.title,
+          description: access.election.description,
+          startDate: toDateTimeLocalValue(access.election.startDate || access.election.startTime),
+          endDate: toDateTimeLocalValue(access.election.endDate || access.election.endTime),
+          resultsVisible: access.election.resultsVisible || false,
+          backgroundImage: access.election.backgroundImage || "",
+          orgMembersOnly: !!access.election.orgMembersOnly,
+          organizationDomains: electionOrganizationDomains(access.election),
+        })
+
+        const voterIDsResult = await getGeneratedVoterIDs(access.election.id)
+        setVoterIDs(voterIDsResult.voterIDs)
       } catch (error) {
         console.error("Error fetching data:", error)
         toast({

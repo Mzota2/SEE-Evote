@@ -14,8 +14,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import {
-  getElectionByToken,
-  getUserRoles,
   getElectionPositions,
   getElectionCandidates,
   addCandidate,
@@ -23,7 +21,7 @@ import {
   deleteCandidate,
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate } from "@/lib/types"
-import { electionTokensMatch } from "@/lib/utils"
+import { canManageElection, openElection } from "@/lib/election-access"
 import { Plus, Edit, Trash2, Save, X, User } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
@@ -79,13 +77,9 @@ export default function CandidatesPage({ params }: CandidatesPageProps) {
       if (!user) return
 
       try {
-        const { election: fetchedElection } = await getElectionByToken(params.electionToken)
-        const { roles } = await getUserRoles(user.id)
-        const relevantRole = roles.find(
-          (role) => electionTokensMatch(role.electionToken, params.electionToken) && role.status === "approved" && role.role === "admin",
-        )
+        const { election: fetchedElection, role: relevantRole } = await openElection(user.id, params.electionToken)
 
-        if (!fetchedElection || !relevantRole) {
+        if (!fetchedElection || !canManageElection(relevantRole)) {
           router.push("/dashboard")
           return
         }

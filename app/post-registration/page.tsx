@@ -113,7 +113,7 @@ export default function PostRegistrationPage() {
       if (result.success) {
         toast({
           title: "Election submitted",
-          description: "A reviewer will approve it before voters can join.",
+          description: "You are the admin. Set up positions and candidates now. Voters can join after a reviewer approves the election.",
         })
         router.push("/dashboard")
       } else {

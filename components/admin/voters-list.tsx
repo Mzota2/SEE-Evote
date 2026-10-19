@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Role, type User } from "@/lib/types"
 import { UserIcon, Mail, Phone, MapPin, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
-import { approveVoter, disapproveVoter, getCastedVotes, getVoterRole } from "@/lib/database"
+import { approveVoter, disapproveVoter, getCastedVotes, getVoterRole, setUserElectionRole } from "@/lib/database"
 import { useToast } from "@/hooks/use-toast"
 
 interface VotersListProps {
@@ -14,9 +14,10 @@ interface VotersListProps {
   loading: boolean
   onVotersUpdate: (voters: User[]) => void
   electionToken: string
+  canAssignRoles?: boolean
 }
 
-export function VotersList({ voters, loading, onVotersUpdate, electionToken }: VotersListProps) {
+export function VotersList({ voters, loading, onVotersUpdate, electionToken, canAssignRoles = false }: VotersListProps) {
   const { toast } = useToast()
   const [showManage, setShowManage] = useState(false);
   const [selectedVoter, setSelectedVoter] = useState<User | null>(null);
@@ -42,6 +43,30 @@ export function VotersList({ voters, loading, onVotersUpdate, electionToken }: V
       console.log("approved how many times");
     } catch (error) {
       console.log(error);
+    }
+  }
+
+  const handleSetRole = async (voterId: string, nextRole: "admin" | "voter") => {
+    try {
+      if (!voterId || !electionToken) return
+      const result = await setUserElectionRole(voterId, electionToken, nextRole)
+      if (result.error) {
+        toast({
+          title: "Could not change the role",
+          description: result.error,
+          variant: "destructive",
+        })
+        return
+      }
+      toast({
+        title: nextRole === "admin" ? "Admin role saved" : "Voter role saved",
+        description: "Their access for this election has been updated.",
+      })
+      await fetchVoterRoles()
+      setShowManage(false)
+      setSelectedVoter(null)
+    } catch (error) {
+      console.log(error)
     }
   }
 
@@ -262,6 +287,10 @@ export function VotersList({ voters, loading, onVotersUpdate, electionToken }: V
             <ManageVoters
               handleApprove={() => handleApprove(selectedVoter.id)}
               handleDisapprove={() => handleDisapprove(selectedVoter.id)}
+              canAssignRoles={canAssignRoles}
+              currentRole={roleFor(selectedVoter.id)?.role}
+              onMakeAdmin={() => handleSetRole(selectedVoter.id, "admin")}
+              onMakeVoter={() => handleSetRole(selectedVoter.id, "voter")}
             />
           </div>
         </div>
@@ -274,19 +303,40 @@ export function VotersList({ voters, loading, onVotersUpdate, electionToken }: V
 interface ManageVotersProps {
   handleApprove: () => void;
   handleDisapprove: () => void;
+  canAssignRoles?: boolean
+  currentRole?: Role["role"]
+  onMakeAdmin?: () => void
+  onMakeVoter?: () => void
 }
-export const ManageVoters = ({ handleApprove, handleDisapprove }: ManageVotersProps) => {
+export const ManageVoters = ({ handleApprove, handleDisapprove, canAssignRoles, currentRole, onMakeAdmin, onMakeVoter }: ManageVotersProps) => {
   return (
-    <div>
-      <p className="text-gray-700 mb-4">Approve or disapprove voters to only allow eligible voters to vote</p>
-      <div className="flex items-center gap-2">
-        <Button className="bg-green-600 text-white" onClick={handleApprove} variant="outline" size="sm">
-          Approve
-        </Button>
-        <Button className="bg-red-600 text-white" onClick={handleDisapprove} variant="outline" size="sm">
-          Disapprove
-        </Button>
+    <div className="space-y-4">
+      <div>
+        <p className="text-gray-700 mb-4">Approve or disapprove voters to only allow eligible voters to vote</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button className="bg-green-600 text-white" onClick={handleApprove} variant="outline" size="sm">
+            Approve
+          </Button>
+          <Button className="bg-red-600 text-white" onClick={handleDisapprove} variant="outline" size="sm">
+            Disapprove
+          </Button>
+        </div>
       </div>
+      {canAssignRoles && currentRole !== "superAdmin" ? (
+        <div className="border-t pt-4">
+          <p className="text-gray-700 mb-3">
+            Current role: <span className="font-medium capitalize">{currentRole || "none"}</span>
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={onMakeAdmin} disabled={currentRole === "admin"}>
+              Make admin
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={onMakeVoter} disabled={currentRole === "voter"}>
+              Make voter
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

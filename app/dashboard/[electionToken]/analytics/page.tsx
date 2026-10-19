@@ -6,15 +6,13 @@ import { useAuth } from "@/hooks/use-auth"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { ElectionAnalytics } from "@/components/analytics/election-analytics"
 import {
-  getElectionByToken,
-  getUserRoles,
   getElectionPositions,
   getElectionCandidates,
   getVoteResults,
   getActionLogsWithUsers,
 } from "@/lib/database"
 import type { Election, Role, Position, Candidate, AuditLogWithUser } from "@/lib/types"
-import { electionTokensMatch } from "@/lib/utils"
+import { canManageElection, openElection } from "@/lib/election-access"
 
 interface AnalyticsPageProps {
   params: {
@@ -46,22 +44,9 @@ export default function AnalyticsPage({ params }: AnalyticsPageProps) {
       if (!user) return
 
       try {
-        // Fetch election data
-        const { election: fetchedElection, error: electionError } = await getElectionByToken(params.electionToken)
-        if (electionError || !fetchedElection) {
-          setError("Election not found or access denied")
-          setLoadingData(false)
-          return
-        }
-
-        // Verify user access
-        const { roles } = await getUserRoles(user.id)
-        const relevantRole = roles.find(
-          (role) => electionTokensMatch(role.electionToken, params.electionToken) && role.status === "approved",
-        )
-
-        if (!relevantRole || relevantRole.role !== "admin") {
-          setError("You don't have admin access to view analytics for this election")
+        const { election: fetchedElection, role: relevantRole, error: accessError } = await openElection(user.id, params.electionToken)
+        if (!fetchedElection || !canManageElection(relevantRole)) {
+          setError(accessError || "You don't have admin access to view analytics for this election")
           setLoadingData(false)
           return
         }

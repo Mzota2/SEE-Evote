@@ -13,15 +13,13 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import {
-  getElectionByToken,
-  getUserRoles,
   getElectionPositions,
   addPosition,
   updatePosition,
   deletePosition,
 } from "@/lib/database"
 import type { Election, Role, Position } from "@/lib/types"
-import { electionTokensMatch } from "@/lib/utils"
+import { canManageElection, openElection } from "@/lib/election-access"
 import { Plus, Edit, Trash2, Save, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -58,13 +56,9 @@ export default function PositionsPage({ params }: PositionsPageProps) {
       if (!user) return
 
       try {
-        const { election: fetchedElection } = await getElectionByToken(params.electionToken)
-        const { roles } = await getUserRoles(user.id)
-        const relevantRole = roles.find(
-          (role) => electionTokensMatch(role.electionToken, params.electionToken) && role.status === "approved" && role.role === "admin",
-        )
+        const { election: fetchedElection, role: relevantRole } = await openElection(user.id, params.electionToken)
 
-        if (!fetchedElection || !relevantRole) {
+        if (!fetchedElection || !canManageElection(relevantRole)) {
           router.push("/dashboard")
           return
         }

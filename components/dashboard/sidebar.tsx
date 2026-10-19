@@ -40,9 +40,10 @@ const getNavigation = (userRole: string, electionToken?: string) => {
   if (electionToken) {
     const electionBase = `/dashboard/${electionToken}`
 
-    if (userRole === "admin") {
+    if (userRole === "admin" || userRole === "superAdmin") {
       return [
         ...baseNavigation,
+        ...(userRole === "superAdmin" ? [{ name: "All elections", href: "/super-admin", icon: Shield }] : []),
         { name: "Election Overview", href: electionBase, icon: Calendar },
         { name: "Positions", href: `${electionBase}/positions`, icon: Vote },
         { name: "Candidates", href: `${electionBase}/candidates`, icon: Users },

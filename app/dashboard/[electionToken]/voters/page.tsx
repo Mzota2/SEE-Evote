@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { VotersList } from "@/components/admin/voters-list"
-import { getUserRoles, getUsersByOrganization } from "@/lib/database"
-import { electionTokensMatch } from "@/lib/utils"
+import { getUsersByOrganization } from "@/lib/database"
+import { canManageElection, openElection } from "@/lib/election-access"
 import type { Role, User } from "@/lib/types"
 
 interface ElectionDashboardPageProps {
@@ -35,14 +35,10 @@ export default function VotersPage({ params }: ElectionDashboardPageProps) {
     const fetchUserRole = async () => {
       if (!user) return
       try {
-        // Fetch user roles to verify access
-        const { roles } = await getUserRoles(user.id)
-        const relevantRole = roles.find(
-          (role) => electionTokensMatch(role.electionToken, params.electionToken) && role.status === "approved",
-        )
+        const { role: relevantRole, error: accessError } = await openElection(user.id, params.electionToken)
 
-        if (!relevantRole) {
-          setError("You don't have access to this election")
+        if (!canManageElection(relevantRole)) {
+          setError(accessError || "You don't have access to manage voters for this election")
           setLoadingData(false)
           return
         }
@@ -75,7 +71,7 @@ export default function VotersPage({ params }: ElectionDashboardPageProps) {
     fetchVoters()
   }, [user, userRole])
 
-  if (loading || !user || (userRole?.role !== "admin" && userRole?.role !== "superAdmin")) {
+  if (loading || loadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -86,15 +82,38 @@ export default function VotersPage({ params }: ElectionDashboardPageProps) {
     )
   }
 
+  if (error || !user || !canManageElection(userRole)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center space-y-3">
+          <h2 className="text-xl font-semibold text-gray-800">Voters are unavailable</h2>
+          <p className="text-gray-600">{error || "You cannot manage voters for this election."}</p>
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="bg-ivote-primary text-white px-4 py-2 rounded hover:bg-ivote-primary/90"
+          >
+            Back to your elections
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <DashboardLayout>
+    <DashboardLayout electionToken={params.electionToken} userRole={userRole.role}>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Voters Management</h1>
           <p className="text-gray-600">Administrators are listed separately from voters who have voted and voters who have not.</p>
         </div>
 
-        <VotersList electionToken={userRole.electionId} voters={voters} loading={loadingVoters} onVotersUpdate={setVoters} />
+        <VotersList
+          electionToken={userRole.electionId}
+          voters={voters}
+          loading={loadingVoters}
+          onVotersUpdate={setVoters}
+          canAssignRoles={userRole.role === "superAdmin"}
+        />
       </div>
     </DashboardLayout>
   )

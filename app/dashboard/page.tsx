@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { getElections, getUserRoles } from "@/lib/database"
+import { getElections, getUserRoles, ensureRequesterAdmin, checkUserSuperAdminRole } from "@/lib/database"
 import { DashboardAnalytics } from "@/components/analytics/dashboard-analytics"
 import type { Election, Role } from "@/lib/types"
-import { Vote, Settings, Clock, CheckCircle, XCircle, TrendingUp } from "lucide-react"
+import { Vote, Settings, Clock, CheckCircle, XCircle, TrendingUp, Shield } from "lucide-react"
 import Link from "next/link"
 import Logo from "@/components/Logo/Logo"
 import { OrgEmailRecovery } from "@/components/auth/org-email-recovery"
@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [elections, setElections] = useState<Election[]>([])
   const [loadingRoles, setLoadingRoles] = useState(true)
   const [showAnalytics, setShowAnalytics] = useState(false)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -34,9 +35,13 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchUserRoles = async () => {
       if (user) {
-        const [{ roles: fetchedRoles }, electionsResult] = await Promise.all([getUserRoles(user.id), getElections()])
+        const [electionsResult, superAdmin] = await Promise.all([getElections(), checkUserSuperAdminRole(user.id)])
+        const created = electionsResult.elections.filter((election) => election.createdBy === user.id)
+        await Promise.all(created.map((election) => ensureRequesterAdmin(user.id, election)))
+        const { roles: fetchedRoles } = await getUserRoles(user.id)
         setRoles(fetchedRoles)
         setElections(electionsResult.elections)
+        setIsSuperAdmin(superAdmin)
         setLoadingRoles(false)
       }
     }
@@ -46,9 +51,13 @@ export default function DashboardPage() {
 
   const refreshRoles = async () => {
     if (!user) return
-    const [{ roles: fetchedRoles }, electionsResult] = await Promise.all([getUserRoles(user.id), getElections()])
+    const [electionsResult, superAdmin] = await Promise.all([getElections(), checkUserSuperAdminRole(user.id)])
+    const created = electionsResult.elections.filter((election) => election.createdBy === user.id)
+    await Promise.all(created.map((election) => ensureRequesterAdmin(user.id, election)))
+    const { roles: fetchedRoles } = await getUserRoles(user.id)
     setRoles(fetchedRoles)
     setElections(electionsResult.elections)
+    setIsSuperAdmin(superAdmin)
   }
 
   if (loading || !user) {
@@ -136,7 +145,7 @@ export default function DashboardPage() {
               domain={election ? electionOrganizationDomains(election) : DEFAULT_ORG_DOMAIN}
               onRestored={refreshRoles}
             />
-          ) : role.status === "approved" ? (
+          ) : role.status === "approved" || (role.role === "admin" && role.status !== "rejected" && election?.createdBy === user.id) ? (
             <Link href={`/dashboard/${role.electionToken}`}>
               <Button className="w-full bg-ivote-primary hover:bg-ivote-primary/90">Enter Dashboard</Button>
             </Link>
@@ -172,6 +181,17 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Hello, {user.name.split(" ")[0]}!</h1>
           <p className="text-gray-600">Welcome to your SEE-Evote Dashboard</p>
         </div>
+
+        {isSuperAdmin ? (
+          <div className="flex justify-center mb-8">
+            <Link href="/super-admin">
+              <Button className="bg-ivote-primary hover:bg-ivote-primary/90">
+                <Shield className="w-4 h-4 mr-2" />
+                Manage all elections
+              </Button>
+            </Link>
+          </div>
+        ) : null}
 
         {loadingRoles ? (
           <div className="text-center">

@@ -17,9 +17,17 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 
+const ACCEPTED_PHOTO_TYPES = new Set(["image/jpeg", "image/jpg", "image/pjpeg", "image/png", "image/x-png"])
+
+function isAcceptedPhoto(file: File) {
+  const type = file.type.toLowerCase()
+  if (ACCEPTED_PHOTO_TYPES.has(type)) return true
+  return /\.(jpe?g|png)$/i.test(file.name)
+}
+
 function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image()
+    const image = document.createElement("img")
     image.onload = () => resolve(image)
     image.onerror = () => reject(new Error("Could not read that image."))
     image.src = src
@@ -88,10 +96,10 @@ export function CandidatePhotoField({
 
   const handleFile = async (file: File | null) => {
     if (!file) return
-    if (!file.type.startsWith("image/")) {
+    if (!isAcceptedPhoto(file)) {
       toast({
         title: "Choose a photo",
-        description: "The file needs to be an image.",
+        description: "Use a JPG, JPEG, or PNG image.",
         variant: "destructive",
       })
       return
@@ -165,7 +173,7 @@ export function CandidatePhotoField({
           <Input
             id={id}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,.jpg,.jpeg,.png"
             onChange={(event) => {
               const file = event.target.files?.[0] ?? null
               event.target.value = ""
@@ -173,7 +181,7 @@ export function CandidatePhotoField({
             }}
             className="w-full max-w-full sm:w-fit"
           />
-          <p className="text-xs text-gray-500">Square photos upload as they are. Wider or taller photos open a crop.</p>
+          <p className="text-xs text-gray-500">JPG, JPEG, and PNG photos are accepted. Square photos upload as they are. Wider or taller photos open a crop.</p>
         </div>
       </div>
 
